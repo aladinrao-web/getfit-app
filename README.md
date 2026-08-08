@@ -21,4 +21,11 @@ npm.cmd run test
 npm.cmd run build
 ```
 
-The application uses deterministic synthetic data. It does not contain or synchronize personal records from the reference Google Sheet.
+## Data modes
+
+- **Demo** is the public default and uses deterministic synthetic history.
+- **Personal** is currently an isolated, disposable browser test workspace. It uses real timezone-aware dates but is not yet cloud-backed.
+
+Private Personal configuration can be imported from Settings as a versioned JSON preset. Keep those files under `.private/`; that directory is ignored by Git. Preset import contains configuration only and is available before Personal check-ins or workouts begin.
+
+The reference Google Sheet remains the operational source of truth until cloud persistence, recovery, and migration checks pass. No personal records or Sheet synchronization are included in this repository.

@@ -11,6 +11,7 @@ import type {
   WorkoutCode,
   WorkoutSession,
 } from '../domain/types'
+import { getSystemTimeZone } from '../domain/date'
 
 export const DEMO_TODAY = '2026-08-08'
 
@@ -113,6 +114,7 @@ function makeCheckIns(): DailyCheckIn[] {
     const date = addDays(start, index)
     const weight = 67 + index * 0.018 + Math.sin(index * 1.7) * 0.16
     entries.push({
+      id: `demo-checkin-${date}`,
       date,
       weightKg: index % 6 === 2 ? undefined : Number(weight.toFixed(1)),
       adherence: {
@@ -124,6 +126,8 @@ function makeCheckIns(): DailyCheckIn[] {
       extrasProteinG: index % 10 === 6 ? 12 : 0,
       extrasCalories: index % 10 === 6 ? 190 : 0,
       notes: index % 9 === 4 ? 'Lunch was smaller than planned.' : index % 7 === 4 ? 'Shake skipped.' : '',
+      updatedAt: `${date}T20:00:00.000Z`,
+      completedAt: `${date}T20:00:00.000Z`,
     })
   }
   return entries
@@ -155,6 +159,8 @@ export function createSyntheticState(): FitnessState {
   return {
     profile: {
       name: 'Demo Athlete',
+      timezone: 'Asia/Calcutta',
+      startingWeightKg: 66.8,
       currentWeightKg: 67.6,
       goalWeightKg: 72,
       proteinFloorMultiplier: 1.4,
@@ -170,5 +176,37 @@ export function createSyntheticState(): FitnessState {
     exercises: syntheticExercises.map((exercise) => ({ ...exercise, targetReps: [...exercise.targetReps] })),
     progressions: syntheticProgressions.map((progression) => ({ ...progression })),
     workouts: makeWorkouts(),
+  }
+}
+
+export function createPersonalState(timezone = getSystemTimeZone()): FitnessState {
+  return {
+    profile: {
+      name: 'Athlete',
+      timezone,
+      startingWeightKg: 70,
+      currentWeightKg: 70,
+      goalWeightKg: 75,
+      proteinFloorMultiplier: 1.4,
+      proteinTargetMultiplier: 1.6,
+      weeklyGainMin: 0.0025,
+      weeklyGainMax: 0.005,
+      calorieAdjustment: 225,
+      allergen: 'Set your strict allergen exclusion',
+    },
+    mealPresets: syntheticMealPresets.map((preset) => ({ ...preset, slots: preset.slots.map((slot) => ({ ...slot })) })),
+    foodLibrary: syntheticFoodLibrary.map((item) => ({ ...item })),
+    checkIns: [],
+    exercises: syntheticExercises.map((exercise) => ({ ...exercise, targetReps: [...exercise.targetReps] })),
+    progressions: syntheticProgressions.map((progression) => ({
+      ...progression,
+      currentWeightKg: 0,
+      lastResult: 'No result yet',
+      nextTarget: 'Choose a starting load',
+      limitingFactor: '',
+      decision: 'Repeat',
+      notes: '',
+    })),
+    workouts: [],
   }
 }

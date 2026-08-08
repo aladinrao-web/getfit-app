@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Apple, BarChart3, Dumbbell, Gauge, LineChart, Settings, UtensilsCrossed } from 'lucide-react'
+import { Apple, BarChart3, Dumbbell, Gauge, LineChart, Settings, UserRound, UtensilsCrossed } from 'lucide-react'
 import { DashboardScreen } from './screens/DashboardScreen'
 import { CheckInScreen } from './screens/CheckInScreen'
 import { TrainScreen } from './screens/TrainScreen'
@@ -7,6 +7,7 @@ import { ProgressionScreen } from './screens/ProgressionScreen'
 import { NutritionScreen } from './screens/NutritionScreen'
 import { TrendsScreen } from './screens/TrendsScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
+import { useFitness } from './store/FitnessContext'
 
 export type AppView = 'dashboard' | 'check-in' | 'train' | 'progression' | 'nutrition' | 'trends' | 'settings'
 
@@ -20,6 +21,7 @@ const navItems = [
 
 export default function App() {
   const [view, setView] = useState<AppView>('dashboard')
+  const { mode } = useFitness()
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -48,7 +50,7 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-foot">
-          <div className="demo-chip"><Apple size={16} /> Synthetic demo data</div>
+          <div className={`mode-chip ${mode}`}>{mode === 'demo' ? <><Apple size={16} />Synthetic demo data</> : <><UserRound size={16} />Personal test workspace</>}</div>
           <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}><Settings size={20} />Settings</button>
         </div>
       </aside>

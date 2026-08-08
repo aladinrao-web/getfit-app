@@ -1,11 +1,14 @@
 export type WorkoutCode = 'A' | 'B' | 'C'
 export type ProgressionDecision = 'Increase' | 'Repeat' | 'Deload' | 'Technique focus'
-export type ProteinStatus = 'Not logged' | 'Below floor' | 'In line' | 'Target met'
+export type ProteinStatus = 'Not logged' | 'In progress' | 'Below floor' | 'In line' | 'Target met'
 export type MealSlotKey = 'breakfast' | 'lunch' | 'dinner' | 'shake'
 export type Adherence = 0 | 0.5 | 0.75 | 1
+export type AppMode = 'demo' | 'personal'
 
 export interface Profile {
   name: string
+  timezone: string
+  startingWeightKg: number
   currentWeightKg: number
   goalWeightKg: number
   proteinFloorMultiplier: number
@@ -39,12 +42,15 @@ export interface FoodReference {
 }
 
 export interface DailyCheckIn {
+  id: string
   date: string
   weightKg?: number
-  adherence: Record<MealSlotKey, Adherence>
+  adherence: Partial<Record<MealSlotKey, Adherence>>
   extrasProteinG: number
   extrasCalories: number
   notes: string
+  updatedAt: string
+  completedAt?: string
 }
 
 export interface Exercise {

@@ -1,88 +1,157 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { createSyntheticState, DEMO_TODAY } from '../data/seed'
+import { DEMO_TODAY } from '../data/seed'
+import { formatDateInTimeZone } from '../domain/date'
+import { createRecordId } from '../domain/ids'
+import { applyPersonalPresetBundle, type PersonalPresetBundle } from '../domain/presets'
 import { applyWorkoutCompletion, startWorkoutDraft } from '../domain/workout'
-import type { DailyCheckIn, ExerciseResult, FitnessState, Profile, WorkoutCode } from '../domain/types'
-
-const STORAGE_KEY = 'getfit-demo-state-v1'
+import type { AppMode, DailyCheckIn, ExerciseResult, FitnessState, Profile, WorkoutCode } from '../domain/types'
+import { loadActiveMode, loadModeState, resetModeState, saveActiveMode, saveModeState } from './persistence'
 
 interface FitnessContextValue {
+  mode: AppMode
   state: FitnessState
+  today: string
+  switchMode: (mode: AppMode) => void
   saveCheckIn: (checkIn: DailyCheckIn) => void
+  completeCheckIn: (checkIn: DailyCheckIn) => void
   startWorkout: (code: WorkoutCode) => void
   updateDraftResult: (exerciseId: string, patch: Partial<ExerciseResult>) => void
   updateDraftNotes: (notes: string) => void
   discardDraft: () => void
   completeWorkout: () => void
   updateProfile: (patch: Partial<Profile>) => void
-  resetDemo: () => void
+  applyPersonalPresets: (bundle: PersonalPresetBundle) => void
+  resetCurrentMode: () => void
+}
+
+interface Workspace {
+  mode: AppMode
+  state: FitnessState
 }
 
 const FitnessContext = createContext<FitnessContextValue | null>(null)
 
-function loadState() {
-  try {
-    const saved = window.localStorage.getItem(STORAGE_KEY)
-    return saved ? (JSON.parse(saved) as FitnessState) : createSyntheticState()
-  } catch {
-    return createSyntheticState()
+function upsertCheckIn(state: FitnessState, checkIn: DailyCheckIn): FitnessState {
+  const index = state.checkIns.findIndex((entry) => entry.date === checkIn.date)
+  const checkIns = [...state.checkIns]
+  if (index >= 0) checkIns[index] = { ...checkIn, id: checkIns[index].id }
+  else checkIns.push(checkIn)
+
+  return {
+    ...state,
+    checkIns,
+    profile: typeof checkIn.weightKg === 'number'
+      ? { ...state.profile, currentWeightKg: checkIn.weightKg }
+      : state.profile,
   }
 }
 
+function loadWorkspace(): Workspace {
+  const mode = loadActiveMode(window.localStorage)
+  return { mode, state: loadModeState(window.localStorage, mode) }
+}
+
 export function FitnessProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<FitnessState>(loadState)
+  const [workspace, setWorkspace] = useState<Workspace>(loadWorkspace)
+  const [now, setNow] = useState(() => new Date())
+  const { mode, state } = workspace
+  const today = mode === 'demo' ? DEMO_TODAY : formatDateInTimeZone(now, state.profile.timezone)
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  }, [state])
+    saveActiveMode(window.localStorage, mode)
+    saveModeState(window.localStorage, mode, state)
+  }, [mode, state])
+
+  useEffect(() => {
+    if (mode === 'demo') return
+    const timer = window.setInterval(() => setNow(new Date()), 60_000)
+    return () => window.clearInterval(timer)
+  }, [mode])
 
   const value = useMemo<FitnessContextValue>(() => ({
+    mode,
     state,
+    today,
+    switchMode(nextMode) {
+      setWorkspace((current) => current.mode === nextMode ? current : {
+        mode: nextMode,
+        state: loadModeState(window.localStorage, nextMode),
+      })
+    },
     saveCheckIn(checkIn) {
-      setState((current) => {
-        const index = current.checkIns.findIndex((entry) => entry.date === checkIn.date)
-        const checkIns = [...current.checkIns]
-        if (index >= 0) checkIns[index] = checkIn
-        else checkIns.push(checkIn)
+      setWorkspace((current) => ({ ...current, state: upsertCheckIn(current.state, checkIn) }))
+    },
+    completeCheckIn(checkIn) {
+      setWorkspace((current) => {
+        const existing = current.state.checkIns.find((entry) => entry.date === checkIn.date)
+        const timestamp = new Date().toISOString()
         return {
           ...current,
-          checkIns,
-          profile: typeof checkIn.weightKg === 'number' ? { ...current.profile, currentWeightKg: checkIn.weightKg } : current.profile,
+          state: upsertCheckIn(current.state, {
+            ...checkIn,
+            updatedAt: timestamp,
+            completedAt: existing?.completedAt ?? checkIn.completedAt ?? timestamp,
+          }),
         }
       })
     },
     startWorkout(code) {
-      setState((current) => current.draftWorkout ? current : { ...current, draftWorkout: startWorkoutDraft(current, code, DEMO_TODAY) })
+      setWorkspace((current) => current.state.draftWorkout ? current : {
+        ...current,
+        state: {
+          ...current.state,
+          draftWorkout: startWorkoutDraft(
+            current.state,
+            code,
+            current.mode === 'demo' ? DEMO_TODAY : formatDateInTimeZone(new Date(), current.state.profile.timezone),
+            createRecordId(`${current.mode}-session`),
+          ),
+        },
+      })
     },
     updateDraftResult(exerciseId, patch) {
-      setState((current) => current.draftWorkout ? {
+      setWorkspace((current) => current.state.draftWorkout ? {
         ...current,
-        draftWorkout: {
-          ...current.draftWorkout,
-          results: current.draftWorkout.results.map((result) => result.exerciseId === exerciseId ? { ...result, ...patch } : result),
+        state: {
+          ...current.state,
+          draftWorkout: {
+            ...current.state.draftWorkout,
+            results: current.state.draftWorkout.results.map((result) => result.exerciseId === exerciseId ? { ...result, ...patch } : result),
+          },
         },
       } : current)
     },
     updateDraftNotes(notes) {
-      setState((current) => current.draftWorkout ? { ...current, draftWorkout: { ...current.draftWorkout, sessionNotes: notes } } : current)
+      setWorkspace((current) => current.state.draftWorkout ? {
+        ...current,
+        state: { ...current.state, draftWorkout: { ...current.state.draftWorkout, sessionNotes: notes } },
+      } : current)
     },
     discardDraft() {
-      setState((current) => ({ ...current, draftWorkout: undefined }))
+      setWorkspace((current) => ({ ...current, state: { ...current.state, draftWorkout: undefined } }))
     },
     completeWorkout() {
-      setState((current) => {
-        if (!current.draftWorkout) return current
-        return applyWorkoutCompletion(current, current.draftWorkout)
+      setWorkspace((current) => {
+        if (!current.state.draftWorkout) return current
+        return { ...current, state: applyWorkoutCompletion(current.state, current.state.draftWorkout) }
       })
     },
     updateProfile(patch) {
-      setState((current) => ({ ...current, profile: { ...current.profile, ...patch } }))
+      setWorkspace((current) => ({
+        ...current,
+        state: { ...current.state, profile: { ...current.state.profile, ...patch } },
+      }))
     },
-    resetDemo() {
-      const fresh = createSyntheticState()
-      window.localStorage.removeItem(STORAGE_KEY)
-      setState(fresh)
+    applyPersonalPresets(bundle) {
+      setWorkspace((current) => {
+        if (current.mode !== 'personal') return current
+        return { ...current, state: applyPersonalPresetBundle(current.state, bundle) }
+      })
     },
-  }), [state])
+    resetCurrentMode() {
+      setWorkspace((current) => ({ ...current, state: resetModeState(window.localStorage, current.mode) }))
+    },
+  }), [mode, state, today])
 
   return <FitnessContext.Provider value={value}>{children}</FitnessContext.Provider>
 }

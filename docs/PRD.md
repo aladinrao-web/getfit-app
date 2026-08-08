@@ -4,7 +4,7 @@
 | --- | --- |
 | Product | getFit |
 | Document status | Working baseline |
-| Version | 0.1 |
+| Version | 0.5 |
 | Product owner and primary user | Kovid |
 | Last updated | 2026-08-08 |
 | Repository baseline | `ac4cc75` — `feat: build getFit MVP` |
@@ -242,6 +242,19 @@ It's done when:
 - The saved value appears on Today and in Trends after reload.
 - Blank weight remains distinct from zero or a failed entry.
 
+### US-02A — Complete the daily check-in in stages
+
+**As the primary user, I want to add weight and meal answers at different times so that daily tracking fits around the day instead of becoming one large task.**
+
+It's done when:
+
+- The first meaningful change creates or updates one resumable record for the date.
+- Weight, each meal answer, extras, and notes save locally without requiring final completion.
+- An unanswered meal remains visibly open and is distinct from an explicit `Skipped` answer.
+- Today distinguishes no check-in, a check-in in progress, and a completed check-in.
+- A partial weight contributes to weight trends immediately; partial nutrition does not count as a completed nutrition day.
+- Completion remains a deliberate action and is available only after every planned meal has an explicit answer.
+
 ### US-03 — Start the recommended workout
 
 **As the primary user, I want the next planned workout and its exercises ready so that I can begin without reconstructing the plan.**
@@ -385,6 +398,8 @@ It's done when:
 - The existing Sheet remains authoritative until all Personal readiness gates pass.
 - A migration rehearsal validates field mapping before the final cutover.
 - Final migration occurs from one frozen Sheet snapshot.
+- Historical data is loaded once into the private cloud store as an operational cutover step; the product does not expose a reusable Sheet-history importer.
+- Historical rep ranges normalize to their lower bound (`7–8` becomes `7`) while the source text remains available in migration evidence or notes.
 - Reconciliation compares weight/check-in counts, workout sessions, exercise progression, and latest values.
 - The app becomes authoritative only after reconciliation is approved.
 - The Sheet remains a read-only archive unless the user later chooses a separate ChatGPT-assisted update.
@@ -397,11 +412,17 @@ It's done when:
 | FR-MODE-01 | P0 | The app shall provide isolated Personal and Demo data modes. | Integration + manual |
 | FR-MODE-02 | P0 | Public deployments shall default to Demo mode. | E2E |
 | FR-MODE-03 | P0 | Mode changes shall never copy data implicitly. | Integration |
+| FR-MODE-04 | P1 | Personal configuration presets shall import only from a validated versioned bundle, only before Personal tracking begins, and shall not contain check-in or workout history. | Unit + E2E |
 | FR-DATE-01 | P0 | Personal mode shall derive today from the configured local timezone. | Unit + integration |
 | FR-DATE-02 | P0 | Stored calendar dates shall use `YYYY-MM-DD`; completion instants shall retain timestamp and timezone context. | Unit |
 | FR-WGT-01 | P0 | The user shall be able to create or update one weight entry per date. | Integration + E2E |
 | FR-WGT-02 | P0 | Weight shall support 0.1 kg precision and reject non-finite or implausible values. | Unit + UI |
 | FR-WGT-03 | P0 | Missing weight shall remain null/absent and shall not affect averages. | Unit |
+| FR-CHK-01 | P0 | A daily check-in shall autosave meaningful changes into one resumable record per date. | Integration + E2E |
+| FR-CHK-02 | P0 | Unanswered meal slots shall remain distinct from an explicit Skipped answer. | Unit + UI |
+| FR-CHK-03 | P0 | A partial weight shall update the weight trend without requiring check-in completion. | Unit + E2E |
+| FR-CHK-04 | P0 | Nutrition coverage and target-day summaries shall include completed check-ins only. | Unit |
+| FR-CHK-05 | P0 | Check-in completion shall require an explicit answer for every planned meal and shall retain a completion timestamp. | Unit + E2E |
 | FR-WKO-01 | P0 | The app shall recommend the next workout from committed history only. | Unit |
 | FR-WKO-02 | P0 | Starting a workout shall create one autosaved draft. | Integration |
 | FR-WKO-03 | P0 | A draft shall persist load, reps, skip state, limiter, form note, decision, and session note. | Integration + E2E |
@@ -423,6 +444,7 @@ It's done when:
 | FR-DATA-02 | P0 | Stored state shall include a schema version and migration path. | Unit + integration |
 | FR-DATA-03 | P0 | Personal data shall support validated export and restore. | Integration + E2E |
 | FR-DATA-04 | P0 | Persistence failure shall not present unsaved data as saved. | Failure test |
+| FR-DATA-05 | P0 | Actual Personal preset values and files shall remain excluded from source control and Demo mode. | Release audit |
 | FR-SYNC-01 | P0 | Personal mode shall persist the authoritative long-term record in an authenticated cloud data store. | Integration + E2E |
 | FR-SYNC-02 | P0 | Personal changes shall save to a local offline cache before background synchronization. | Integration + offline E2E |
 | FR-SYNC-03 | P0 | The interface shall show whether data is saved locally, syncing, synced, or failed. | UI + E2E |
@@ -437,6 +459,8 @@ It's done when:
 | FR-MIG-03 | P0 | Final migration shall use one frozen Sheet snapshot and shall not require dual entry. | Operational rehearsal |
 | FR-MIG-04 | P0 | Reconciliation shall compare counts and latest values for weights, workouts, and progression before cutover. | Migration test |
 | FR-MIG-05 | P0 | After cutover, the app cloud data store shall be the only operational source of truth. | Release audit |
+| FR-MIG-06 | P0 | Sheet history shall be loaded once into the private cloud store during final cutover rather than through a reusable runtime import feature. | Architecture + migration rehearsal |
+| FR-MIG-07 | P0 | Historical rep ranges shall map to the lower bound while retaining the original source value in migration evidence or notes. | Migration test |
 | FR-NUT-01 | P1 | Nutrition shall remain preset-based and exception-oriented. | Product review |
 | FR-NUT-02 | P1 | Over-target bars shall cap visual fill, show an overflow marker, and announce the real percentage. | Unit + accessibility |
 | FR-DEMO-01 | P1 | Demo mode shall use deterministic synthetic data and support reset. | Unit + E2E |
@@ -449,7 +473,7 @@ It's done when:
 ### Core entities
 
 - **Profile:** goals, gain band, progression/nutrition rules, allergen note, timezone.
-- **Weight/check-in:** calendar date, optional weight, optional preset adherence and exceptions.
+- **Weight/check-in:** stable ID, calendar date, optional weight, partial preset adherence, exceptions, updated timestamp, and optional completion timestamp.
 - **Exercise:** workout code, order, target reps, warm-up, coaching cue.
 - **Exercise progression:** working load, last result, next target, limiter, decision, notes, increment.
 - **Workout draft:** stable session ID, date, workout code, mutable exercise results, notes.
@@ -475,6 +499,9 @@ It's done when:
 13. The Sheet and the app are never simultaneously treated as editable sources of truth.
 14. Sheet-ready exports are immutable snapshots, not synchronization instructions.
 15. Restore replaces Personal state only after a pre-import backup succeeds.
+16. An unanswered meal is not equivalent to a skipped meal.
+17. Check-in completion requires an explicit answer for every planned meal.
+18. Partial check-ins may update weight trends but do not count toward completed nutrition summaries.
 
 ## 12. Non-functional requirements
 
@@ -563,6 +590,13 @@ It's done when:
 | TC-028 | P0 | Produce a Sheet-ready export | Manifest and file counts reconcile with Personal state |
 | TC-029 | P0 | Rehearse Sheet migration | Mapped records, counts, latest values, and progression reconcile |
 | TC-030 | P0 | Inspect network and Sheet access | No automatic Google Sheets write or bidirectional sync exists |
+| TC-031 | P1 | Import a valid private preset into an empty Personal workspace | Profile, meals, foods, exercises, and progression update; history remains empty; Demo is unchanged |
+| TC-032 | P0 | Enter only today's morning weight, then leave and reopen | One in-progress record resumes with the weight and Today/Trends use it immediately |
+| TC-033 | P0 | Answer one meal and wait for autosave | The answer survives reload; the other meals remain open rather than Skipped |
+| TC-034 | P0 | Attempt completion with an unanswered meal | Completion remains unavailable and the partial record stays resumable |
+| TC-035 | P0 | Explicitly answer all meals and complete | One completed record is stored; Today shows completed and nutrition summaries include the day |
+| TC-036 | P0 | Migrate historical rep values `7–8` and `12–13` | App stores `7` and `12`; reconciliation evidence retains the original ranges |
+| TC-037 | P0 | Run the final Sheet migration twice in rehearsal | Stable IDs prevent duplicates and record counts remain unchanged |
 
 ### Personal-use release gates
 
@@ -571,6 +605,7 @@ The Personal mode release is ready only when:
 - All P0 requirements are implemented or explicitly deferred through an accepted decision.
 - All P0 automated tests pass.
 - TC-001 through TC-018 pass on the release build.
+- TC-032 through TC-035 pass on the release build.
 - No known path creates duplicate committed sessions or silently loses a draft.
 - Authenticated cloud persistence, offline queueing, reconnect, and recovery are proven on phone and desktop.
 - Export and replace-only restore are proven with a fresh browser profile.
@@ -713,5 +748,8 @@ A requirement or story is done when:
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 0.5 | 2026-08-08 | Made Sheet history migration a one-time private cutover operation and defined lower-bound normalization for historical rep ranges. |
+| 0.4 | 2026-08-08 | Defined staged daily check-ins: autosaved partial state, unanswered-versus-skipped semantics, immediate weight use, and explicit completion. |
+| 0.3 | 2026-08-08 | Added the private Personal preset import boundary: versioned configuration only, empty-workspace guard, and Git exclusion. |
 | 0.2 | 2026-08-08 | Required cloud-backed Personal persistence before cutover; resolved import, correction, and mode questions; added controlled Sheet migration and snapshot export requirements. |
 | 0.1 | 2026-08-08 | Created the personal-use PRD backbone from the synthetic MVP, product priorities, and external PRD/decision-record practices. |

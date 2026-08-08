@@ -50,8 +50,8 @@ export function StatusPill({ status }: { status: ProteinStatus | ProgressionDeci
   const tone =
     status === 'Target met' || status === 'Increase' ? 'green'
       : status === 'Below floor' || status === 'Deload' ? 'red'
-        : status === 'In line' || status === 'Repeat' ? 'amber'
-          : status === 'Technique focus' ? 'blue' : 'neutral'
+      : status === 'In line' || status === 'Repeat' ? 'amber'
+          : status === 'In progress' || status === 'Technique focus' ? 'blue' : 'neutral'
   return <span className={`status-pill status-${tone}`}>{status}</span>
 }
 

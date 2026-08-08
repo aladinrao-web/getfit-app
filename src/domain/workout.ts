@@ -1,4 +1,5 @@
 import type { DraftWorkout, Exercise, ExerciseProgression, ExerciseResult, FitnessState, ProgressionDecision, WorkoutCode } from './types'
+import { createRecordId } from './ids'
 
 const cycle: WorkoutCode[] = ['A', 'B', 'C']
 
@@ -8,7 +9,7 @@ export function getNextWorkoutCode(state: FitnessState): WorkoutCode {
   return cycle[(cycle.indexOf(latest.workout) + 1) % cycle.length]
 }
 
-export function startWorkoutDraft(state: FitnessState, code: WorkoutCode, date: string): DraftWorkout {
+export function startWorkoutDraft(state: FitnessState, code: WorkoutCode, date: string, sessionId = createRecordId('session')): DraftWorkout {
   const exercises = state.exercises.filter((exercise) => exercise.workout === code).sort((a, b) => a.order - b.order)
   const results = exercises.map((exercise) => {
     const progression = state.progressions.find((item) => item.exerciseId === exercise.id)
@@ -23,7 +24,7 @@ export function startWorkoutDraft(state: FitnessState, code: WorkoutCode, date: 
   })
 
   return {
-    id: `session-${date}-${code}-${state.workouts.length + 1}`,
+    id: sessionId,
     date,
     workout: code,
     results,
@@ -44,19 +45,20 @@ function nextTargetFor(decision: ProgressionDecision, result: ExerciseResult, pr
   return `${result.weightKg} kg × ${target}`
 }
 
-export function applyWorkoutCompletion(state: FitnessState, draft: DraftWorkout): FitnessState {
+export function applyWorkoutCompletion(state: FitnessState, draft: DraftWorkout, completedAt = new Date().toISOString()): FitnessState {
   const completedResults = draft.results.filter((result) => !result.skipped && result.reps.some((value) => value !== null))
   if (!completedResults.length) return state
 
+  const existingIndex = state.workouts.findIndex((workout) => workout.id === draft.id)
+  const existingSession = existingIndex >= 0 ? state.workouts[existingIndex] : undefined
   const completedSession = {
     id: draft.id,
     date: draft.date,
     workout: draft.workout,
     results: completedResults,
     sessionNotes: draft.sessionNotes,
-    completedAt: `${draft.date}T18:30:00.000Z`,
+    completedAt: existingSession?.completedAt ?? completedAt,
   }
-  const existingIndex = state.workouts.findIndex((workout) => workout.id === draft.id)
   const workouts = [...state.workouts]
   if (existingIndex >= 0) workouts[existingIndex] = completedSession
   else workouts.push(completedSession)

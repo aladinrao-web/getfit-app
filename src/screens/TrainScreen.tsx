@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { AlertCircle, ArrowLeft, Check, ChevronDown, Clock3, Dumbbell, Flag, RotateCcw, X } from 'lucide-react'
-import { DEMO_TODAY } from '../data/seed'
 import { formatLongDate, formatShortDate } from '../domain/calculations'
 import { formatExerciseResult, getNextWorkoutCode } from '../domain/workout'
 import type { ExerciseResult, ProgressionDecision, WorkoutCode, WorkoutSession } from '../domain/types'

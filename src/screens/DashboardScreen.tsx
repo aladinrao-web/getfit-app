@@ -1,15 +1,18 @@
 import { ArrowRight, Check, ChevronRight, Dumbbell, Flame, Scale, Sparkles, UtensilsCrossed } from 'lucide-react'
 import type { AppView } from '../App'
-import { DEMO_TODAY } from '../data/seed'
 import { calculateMealTotals, formatLongDate, getFourteenDayNutrition, getPresetForDate, getWeightSummary, proteinTargets } from '../domain/calculations'
+import { getAnsweredMealCount, hasCheckInProgress } from '../domain/checkIn'
 import { getNextWorkoutCode } from '../domain/workout'
 import { useFitness } from '../store/FitnessContext'
 import { Button, Card, Metric, PageHeader, ProgressBar, SectionHeading, StatusPill } from '../components/ui'
 
 export function DashboardScreen({ navigate }: { navigate: (view: AppView) => void }) {
-  const { state, startWorkout } = useFitness()
-  const todayCheckIn = state.checkIns.find((entry) => entry.date === DEMO_TODAY)
-  const preset = getPresetForDate(state.mealPresets, DEMO_TODAY)
+  const { mode, state, startWorkout, today } = useFitness()
+  const todayCheckIn = state.checkIns.find((entry) => entry.date === today)
+  const todayComplete = Boolean(todayCheckIn?.completedAt)
+  const todayInProgress = hasCheckInProgress(todayCheckIn) && !todayComplete
+  const answeredMeals = getAnsweredMealCount(todayCheckIn)
+  const preset = getPresetForDate(state.mealPresets, today)
   const todayMeals = calculateMealTotals(todayCheckIn, preset, state.profile)
   const targets = proteinTargets(state.profile)
   const weight = getWeightSummary(state.checkIns, state.profile)
@@ -17,7 +20,9 @@ export function DashboardScreen({ navigate }: { navigate: (view: AppView) => voi
   const hasWorkoutDraft = Boolean(state.draftWorkout)
   const displayedWorkout = state.draftWorkout?.workout ?? getNextWorkoutCode(state)
   const displayedExercises = state.exercises.filter((exercise) => exercise.workout === displayedWorkout).sort((a, b) => a.order - b.order)
-  const progressPercent = ((weight.average ?? state.profile.currentWeightKg) - 66.8) / (state.profile.goalWeightKg - 66.8)
+  const displayedAverage = weight.average ?? (mode === 'demo' ? state.profile.currentWeightKg : null)
+  const progressRange = state.profile.goalWeightKg - state.profile.startingWeightKg
+  const progressPercent = displayedAverage === null || progressRange <= 0 ? 0 : (displayedAverage - state.profile.startingWeightKg) / progressRange
   const attention = state.progressions.filter((item) => item.decision !== 'Repeat').slice(0, 3)
 
   function beginWorkout() {
@@ -28,17 +33,17 @@ export function DashboardScreen({ navigate }: { navigate: (view: AppView) => voi
   return (
     <div className="page dashboard-page">
       <PageHeader
-        eyebrow={formatLongDate(DEMO_TODAY)}
+        eyebrow={formatLongDate(today)}
         title={`Good morning, ${state.profile.name.split(' ')[0]}.`}
         detail="One check-in. One clear next step."
-        action={<span className="demo-badge">Demo mode</span>}
+        action={<span className={`mode-badge ${mode}`}>{mode === 'demo' ? 'Demo mode' : 'Personal mode'}</span>}
       />
 
       <div className="dashboard-hero-grid">
         <Card className="hero-card hero-primary">
           <div className="hero-card-top"><div className="icon-tile lime"><Scale size={22} /></div><span>Lean-gain trajectory</span></div>
           <div className="weight-hero">
-            <div><strong>{(weight.average ?? state.profile.currentWeightKg).toFixed(1)}</strong><span>kg 7-day avg</span></div>
+            <div><strong>{displayedAverage?.toFixed(1) ?? '—'}</strong><span>{displayedAverage === null ? 'log first weight' : 'kg 7-day avg'}</span></div>
             <div className="goal-ring" style={{ '--progress': `${Math.round(Math.max(0, Math.min(1, progressPercent)) * 100)}%` } as React.CSSProperties}>
               <span>{state.profile.goalWeightKg}<small>kg goal</small></span>
             </div>
@@ -51,10 +56,18 @@ export function DashboardScreen({ navigate }: { navigate: (view: AppView) => voi
           <div className="hero-card-top"><div className="icon-tile cream"><UtensilsCrossed size={22} /></div><StatusPill status={todayMeals.status} /></div>
           <div>
             <p className="eyebrow">Today’s check-in</p>
-            <h2>{todayCheckIn ? 'You’re logged.' : 'Thirty seconds. That’s it.'}</h2>
-            <p>{todayCheckIn ? `${Math.round(todayMeals.actualProtein ?? 0)} g protein estimated from today’s presets.` : 'Add morning weight, tap meal completion, and mention only what changed.'}</p>
+            <h2>{todayComplete ? 'You’re logged.' : todayInProgress ? 'Check-in in progress.' : 'Thirty seconds. That’s it.'}</h2>
+            <p>{todayComplete
+              ? `${Math.round(todayMeals.actualProtein ?? 0)} g protein estimated from today’s presets.`
+              : todayInProgress
+                ? `${answeredMeals} of 4 meals answered. Your weight and changes are already saved.`
+                : 'Add morning weight, tap meal completion, and mention only what changed.'}</p>
           </div>
-          <Button onClick={() => navigate('check-in')}>{todayCheckIn ? <><Check size={18} />Review check-in</> : <>Check in now <ArrowRight size={18} /></>}</Button>
+          <Button onClick={() => navigate('check-in')}>{todayComplete
+            ? <><Check size={18} />Review check-in</>
+            : todayInProgress
+              ? <>Continue check-in <ArrowRight size={18} /></>
+              : <>Check in now <ArrowRight size={18} /></>}</Button>
         </Card>
       </div>
 
@@ -76,6 +89,7 @@ export function DashboardScreen({ navigate }: { navigate: (view: AppView) => voi
         <Card>
           <SectionHeading title="Progression pulse" action={<button className="text-button" onClick={() => navigate('progression')}>All exercises <ChevronRight size={17} /></button>} />
           <div className="progression-list compact-list">
+            {!attention.length && <p className="empty-state-copy">Complete a workout to create your first progression signal.</p>}
             {attention.map((progression) => {
               const exercise = state.exercises.find((item) => item.id === progression.exerciseId)!
               return <div className="progression-row" key={progression.exerciseId}><div><strong>{exercise.name}</strong><span>{progression.nextTarget}</span></div><StatusPill status={progression.decision} /></div>
@@ -86,7 +100,7 @@ export function DashboardScreen({ navigate }: { navigate: (view: AppView) => voi
 
       <Card className="weekly-strip">
         <div className="weekly-icon"><Flame size={24} /></div>
-        <div><p className="eyebrow">This week’s focus</p><h3>Quality reps before heavier reps</h3><p>Three exercises need technique or load attention. Keep the next sessions deliberate.</p></div>
+        <div><p className="eyebrow">This week’s focus</p><h3>Quality reps before heavier reps</h3><p>{attention.length ? `${attention.length} exercise${attention.length === 1 ? '' : 's'} need technique or load attention. Keep the next sessions deliberate.` : 'Log your first completed session to establish the next targets.'}</p></div>
         <button className="round-arrow" onClick={() => navigate('progression')} aria-label="See progression"><ArrowRight size={20} /></button>
       </Card>
     </div>

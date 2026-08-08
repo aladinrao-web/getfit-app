@@ -1,4 +1,5 @@
 import type { DailyCheckIn, MealPreset, Profile, ProteinStatus } from './types'
+import { getAnsweredMealCount } from './checkIn'
 
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -34,12 +35,18 @@ export function calculateMealTotals(checkIn: DailyCheckIn | undefined, preset: M
     return { plannedProtein, plannedCalories, actualProtein: null, actualCalories: null, coverage: null, status: 'Not logged' as ProteinStatus }
   }
 
-  const actualProtein = preset.slots.reduce((sum, slot) => sum + slot.proteinG * checkIn.adherence[slot.key], checkIn.extrasProteinG)
-  const actualCalories = preset.slots.reduce((sum, slot) => sum + slot.calories * checkIn.adherence[slot.key], checkIn.extrasCalories)
-  const coverage = plannedCalories ? actualCalories / plannedCalories : null
-  let status: ProteinStatus = 'In line'
-  if (actualProtein < targets.floor) status = 'Below floor'
-  if (actualProtein >= targets.target) status = 'Target met'
+  const answeredMeals = getAnsweredMealCount(checkIn)
+  const hasNutritionData = answeredMeals > 0 || checkIn.extrasProteinG > 0 || checkIn.extrasCalories > 0
+  const actualProtein = hasNutritionData
+    ? preset.slots.reduce((sum, slot) => sum + slot.proteinG * (checkIn.adherence[slot.key] ?? 0), checkIn.extrasProteinG)
+    : null
+  const actualCalories = hasNutritionData
+    ? preset.slots.reduce((sum, slot) => sum + slot.calories * (checkIn.adherence[slot.key] ?? 0), checkIn.extrasCalories)
+    : null
+  const coverage = plannedCalories && actualCalories !== null ? actualCalories / plannedCalories : null
+  let status: ProteinStatus = checkIn.completedAt ? 'In line' : 'In progress'
+  if (checkIn.completedAt && actualProtein !== null && actualProtein < targets.floor) status = 'Below floor'
+  if (checkIn.completedAt && actualProtein !== null && actualProtein >= targets.target) status = 'Target met'
 
   return { plannedProtein, plannedCalories, actualProtein, actualCalories, coverage, status }
 }
@@ -96,7 +103,7 @@ export function getWeightSummary(checkIns: DailyCheckIn[], profile: Profile) {
 }
 
 export function getFourteenDayNutrition(checkIns: DailyCheckIn[], presets: MealPreset[], profile: Profile) {
-  const recent = [...checkIns].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 14)
+  const recent = checkIns.filter((entry) => Boolean(entry.completedAt)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 14)
   const totals = recent.map((entry) => calculateMealTotals(entry, getPresetForDate(presets, entry.date), profile))
   const coverages = totals.map((total) => total.coverage).filter((value): value is number => value !== null)
   return {

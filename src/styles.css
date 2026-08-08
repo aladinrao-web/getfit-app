@@ -48,7 +48,9 @@ p { color: var(--muted); line-height: 1.55; }
 .desktop-sidebar nav button:hover, .sidebar-foot button:hover { background: #f0f1eb; color: var(--ink); }
 .desktop-sidebar nav button.active, .sidebar-foot button.active { background: var(--green); color: white; box-shadow: 0 8px 20px rgba(18,60,50,.14); }
 .sidebar-foot { margin-top: auto; display: grid; gap: 14px; }
-.demo-chip { display: flex; align-items: center; gap: 8px; margin: 0 7px; padding: 10px 12px; border-radius: 12px; background: #eff3df; color: #476032; font-size: .77rem; font-weight: 650; }
+.mode-chip { display: flex; align-items: center; gap: 8px; margin: 0 7px; padding: 10px 12px; border-radius: 12px; font-size: .77rem; font-weight: 650; }
+.mode-chip.demo { background: #eff3df; color: #476032; }
+.mode-chip.personal { background: #e6f0ed; color: #245f50; }
 .app-content { min-height: 100vh; margin-left: 246px; }
 .mobile-header, .mobile-nav { display: none; }
 .page { width: min(1240px, calc(100% - 64px)); margin: 0 auto; padding: 54px 0 72px; }
@@ -57,7 +59,8 @@ p { color: var(--muted); line-height: 1.55; }
 .page-header h1 { max-width: 780px; }
 .page-detail { max-width: 640px; margin: 0; font-size: 1.02rem; }
 .eyebrow { margin-bottom: 8px; color: var(--green-2); font-size: .72rem; font-weight: 780; letter-spacing: .12em; text-transform: uppercase; }
-.demo-badge { padding: 8px 12px; border: 1px solid #d9ddd5; border-radius: 999px; color: var(--muted); background: rgba(255,255,255,.5); font-size: .76rem; font-weight: 700; white-space: nowrap; }
+.mode-badge { padding: 8px 12px; border: 1px solid #d9ddd5; border-radius: 999px; color: var(--muted); background: rgba(255,255,255,.5); font-size: .76rem; font-weight: 700; white-space: nowrap; }
+.mode-badge.personal { border-color: #bcd8cf; color: #245f50; background: #edf7f3; }
 .back-button { display: flex; align-items: center; gap: 7px; margin-bottom: 28px; padding: 0; border: 0; background: transparent; color: var(--green-2); font-weight: 700; }
 
 .card { border: 1px solid rgba(21,32,29,.08); border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow); }
@@ -158,10 +161,15 @@ p { color: var(--muted); line-height: 1.55; }
 .checkin-layout { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 18px; align-items: start; }
 .checkin-form { display: grid; gap: 14px; }
 .checkin-form > .card { padding: 22px; }
+.checkin-stage-card { display: grid; gap: 8px; border-color: #cdded7; background: #f3f8f5; box-shadow: none; }
+.checkin-stage-card > div { display: flex; align-items: center; gap: 8px; color: var(--green-2); font-size: .8rem; font-weight: 760; }
+.checkin-stage-card p { margin: 0; color: #52635d; font-size: .78rem; line-height: 1.5; }
 .weight-entry-card { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 16px; }
 .weight-entry-card .field { max-width: 300px; }
 .meal-checkin-list { display: grid; gap: 10px; }
 .meal-checkin-card { padding: 20px; }
+.meal-checkin-card.unanswered { border-color: #d4d9d3; box-shadow: 0 10px 28px rgba(32,49,43,.035); }
+.meal-checkin-card.unanswered .meal-checkin-head > strong { color: #9aa29e; }
 .meal-checkin-head { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; }
 .meal-checkin-head h3 { margin-bottom: 3px; font-size: 1rem; }
 .meal-checkin-head p:last-child { margin: 0; font-size: .76rem; }
@@ -173,6 +181,7 @@ p { color: var(--muted); line-height: 1.55; }
 .two-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
 .sticky-card { position: sticky; top: 24px; padding: 24px; }
 .summary-top { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 23px; }
+.summary-top .status-pill { align-self: flex-start; }
 .summary-top > div { display: flex; flex-direction: column; }
 .summary-top strong { font-size: 2.5rem; letter-spacing: -.06em; }
 .summary-top strong small { display: block; margin-top: 3px; color: var(--muted); font-size: .72rem; letter-spacing: 0; }
@@ -185,6 +194,8 @@ p { color: var(--muted); line-height: 1.55; }
 .info-note svg { flex: 0 0 auto; margin-top: 2px; }
 .info-note p { margin: 0; color: inherit; font-size: .72rem; line-height: 1.45; }
 .summary-card .button { width: 100%; }
+.checkin-save-state { min-height: 25px; display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin: -6px 0 12px; color: var(--muted); font-size: .68rem; font-weight: 680; }
+.checkin-actions { display: grid; gap: 9px; }
 
 /* Nutrition */
 .day-tabs { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; margin-bottom: 18px; }
@@ -362,6 +373,23 @@ p { color: var(--muted); line-height: 1.55; }
 
 /* Settings */
 .settings-layout { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(290px,.65fr); gap: 16px; align-items: start; }
+.mode-switch-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 14px; padding: 20px 23px; }
+.mode-switch-card h2 { margin-bottom: 4px; font-size: 1.25rem; }
+.mode-switch-card p { margin-bottom: 0; font-size: .8rem; }
+.mode-switch { display: grid; grid-template-columns: 1fr 1fr; flex: 0 0 260px; gap: 5px; padding: 5px; border-radius: 14px; background: #eef0eb; }
+.mode-switch button { min-height: 42px; border: 0; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 7px; background: transparent; color: var(--muted); font-weight: 700; }
+.mode-switch button.active { color: var(--green); background: white; box-shadow: 0 5px 14px rgba(25,38,34,.09); }
+.personal-readiness-note { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; padding: 15px 18px; border: 1px solid #efd2ad; border-radius: 16px; color: #8a5a1b; background: #fff8e9; }
+.personal-readiness-note div { display: grid; gap: 3px; }
+.personal-readiness-note strong { font-size: .82rem; }
+.personal-readiness-note span { color: #7d6b52; font-size: .76rem; line-height: 1.45; }
+.preset-import-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 14px; padding: 20px 23px; }
+.preset-import-card h2 { margin-bottom: 4px; font-size: 1.15rem; }
+.preset-import-card p { max-width: 720px; margin-bottom: 0; font-size: .8rem; }
+.preset-file-button { flex: 0 0 auto; cursor: pointer; }
+.preset-file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.preset-file-button.disabled { cursor: not-allowed; opacity: .45; }
+.preset-status { display: block; margin-top: 8px; color: var(--green-2); font-size: .74rem; font-weight: 700; }
 .settings-layout > div { display: grid; gap: 13px; }
 .settings-layout > div > .card, .settings-layout aside > .card { padding: 23px; }
 .settings-layout aside { display: grid; gap: 13px; }
@@ -375,6 +403,7 @@ p { color: var(--muted); line-height: 1.55; }
 .danger-card h3 { margin: 0; }
 .danger-card p { font-size: .78rem; }
 .danger-card .button { width: 100%; }
+.empty-state-copy { margin: 0; padding: 15px; border-radius: 12px; background: #f3f5f1; font-size: .78rem; }
 
 @media (max-width: 1100px) {
   .metric-grid.four { grid-template-columns: repeat(2,1fr); }
@@ -397,6 +426,10 @@ p { color: var(--muted); line-height: 1.55; }
   .page { width: min(100% - 36px, 760px); padding: 34px 0 104px; }
   .page-header { margin-bottom: 24px; }
   .dashboard-hero-grid, .two-column-layout, .checkin-layout, .nutrition-layout, .settings-layout, .trends-bottom-grid { grid-template-columns: 1fr; }
+  .mode-switch-card { align-items: stretch; flex-direction: column; }
+  .mode-switch { flex-basis: auto; }
+  .preset-import-card { align-items: stretch; flex-direction: column; }
+  .preset-file-button { width: 100%; }
   .sticky-card { position: static; }
   .workout-plan-grid { grid-template-columns: 1fr; }
   .workout-plan-card ol { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
@@ -429,6 +462,7 @@ p { color: var(--muted); line-height: 1.55; }
   .meal-checkin-head > strong { font-size: 1.1rem; }
   .segmented-control { gap: 3px; }
   .segmented-control button { padding: 5px; font-size: .65rem; }
+  .checkin-save-state { justify-content: flex-start; }
   .two-fields, .settings-grid { grid-template-columns: 1fr; }
   .day-tabs { gap: 4px; overflow: hidden; }
   .day-tabs button { min-width: 0; padding-inline: 2px; }

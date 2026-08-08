@@ -87,6 +87,9 @@ Evidence or condition that should reopen the decision.
 | [D-017](#d-017--use-replace-only-restore-with-a-pre-import-backup) | 2026-08-08 | Accepted | Replace Personal state only after validation and automatic backup | Avoid merge conflicts and duplicate records in Personal v1 |
 | [D-018](#d-018--recompute-affected-progression-after-history-correction) | 2026-08-08 | Accepted | Recompute the affected exercise from its latest remaining result | Keep progression trustworthy after edits without rewriting later decisions |
 | [D-019](#d-019--use-sheet-ready-exports-as-snapshots-not-synchronization) | 2026-08-08 | Accepted | Export versioned snapshots; do not automate Google Sheets writes | Preserve portability without creating another synchronization system |
+| [D-020](#d-020--import-private-personal-presets-without-versioning-the-data) | 2026-08-08 | Accepted | Apply ignored local preset bundles to an empty Personal workspace | Personalize the app without exposing health data in Git |
+| [D-021](#d-021--make-the-daily-check-in-progressively-saved-and-explicitly-completed) | 2026-08-08 | Accepted | Save one daily check-in progressively and complete it explicitly | Fit tracking around the day without corrupting nutrition meaning |
+| [D-022](#d-022--migrate-sheet-history-once-at-cloud-cutover) | 2026-08-08 | Accepted | Load Sheet history once into the private cloud store | Avoid productizing a temporary migration path |
 
 ## Timeline
 
@@ -118,6 +121,12 @@ Evidence or condition that should reopen the decision.
 - Historical corrections recompute only the affected exercise from its latest remaining result.
 - App exports are versioned Sheet-ready snapshots, not automatic or bidirectional Sheet synchronization.
 - Any optional later Sheet update will be a separate ChatGPT-assisted action.
+
+### 2026-08-08 — Private Personal preset strategy
+
+- Profile, meal, food, and exercise presets are read from the authoritative Sheet without importing logs.
+- The repository contains only the versioned importer and validation rules.
+- Actual Personal preset values remain in a Git-ignored local file and browser state.
 
 ## D-001 — Use the existing tracker and strength plan as product references
 
@@ -777,3 +786,115 @@ Snapshots provide portability, auditability, and an escape route without turning
 ### Revisit when
 
 Manual snapshot handling becomes a repeated burden and a one-way archival integration has clear value independent of operational sync.
+
+## D-020 — Import private Personal presets without versioning the data
+
+- Date: 2026-08-08
+- Status: Accepted
+- Owners: Product, Engineering
+- Related: D-007, D-011, D-015; Personal-use release privacy gate
+
+### Context
+
+Personal mode needs the user's real profile, meal presets, food references, and strength targets to be useful. Those values include health and allergy information that should not appear in a public proof-of-work repository. Cloud-backed Personal storage is not ready yet, and the Sheet remains the operational source of truth.
+
+### Options considered
+
+1. Commit real Personal defaults in the source-controlled seed.
+2. Keep generic defaults and require repeated manual setup in the browser.
+3. Version a generic preset importer while keeping the actual preset bundle in a Git-ignored local file.
+
+### Decision
+
+We will import Personal configuration from a schema-versioned local JSON bundle that is excluded from Git. Import is allowed only while the Personal workspace has no check-ins, completed workouts, or draft workout. The bundle contains configuration and progression baselines, not workout or check-in history.
+
+### Rationale
+
+This makes the local product personally useful now without weakening the privacy boundary of the GitHub portfolio or creating an unofficial history migration before cutover.
+
+### Consequences
+
+- The public repository contains importer code and tests but no Personal preset values.
+- Resetting browser storage requires re-importing the ignored local bundle.
+- Preset schema validation and configuration/history separation are testable proof-of-work artifacts.
+- Cross-device availability still depends on the future authenticated cloud milestone.
+
+### Revisit when
+
+Authenticated cloud storage and the controlled Sheet migration replace the local Personal setup path.
+
+## D-021 — Make the daily check-in progressively saved and explicitly completed
+
+- Date: 2026-08-08
+- Status: Accepted
+- Owners: Product, Engineering, Design
+- Related: US-02, US-02A, FR-CHK-01 through FR-CHK-05, TC-032 through TC-035
+
+### Context
+
+Weight is usually known in the morning, while meal outcomes become known throughout the day. Requiring every field in one sitting turns a low-friction check-in into a deferred task and makes the app less useful as the daily system of record. Treating untouched meals as zero would make partial data look complete and distort nutrition summaries.
+
+### Options considered
+
+1. Require one complete form submission at the end of the day.
+2. Store a separate opaque draft and publish all data only on completion.
+3. Progressively save one dated record, use valid partial signals immediately, and retain an explicit completion boundary.
+
+### Decision
+
+We will progressively autosave one daily check-in record per date. Weight, explicit meal answers, extras, and notes remain available when the user returns. An unanswered meal stays open and is not interpreted as `Skipped`. Weight contributes to weight trends immediately, while aggregate nutrition coverage includes the record only after every meal is answered and the user explicitly completes the check-in.
+
+### Rationale
+
+This matches when the information becomes available and removes the need to remember it later. One progressively saved record avoids duplicate draft and committed entities, while the completion timestamp preserves a trustworthy boundary for nutrition reporting.
+
+### Consequences
+
+- Today needs three states: not started, in progress, and completed.
+- The persisted schema must represent partial adherence and completion timestamps and migrate older complete records.
+- Autosave communicates local durability but does not imply future cloud synchronization.
+- Completion remains deliberate even when all meal answers are present.
+
+### Revisit when
+
+The product supports multiple check-ins per date, meal plans with variable slot counts, or collaborative edits that require a separate draft/version model.
+
+## D-022 — Migrate Sheet history once at cloud cutover
+
+- Date: 2026-08-08
+- Status: Accepted
+- Owners: Product, Engineering
+- Related: D-015, D-016, FR-MIG-01 through FR-MIG-07, TC-036, TC-037
+
+### Context
+
+The Sheet is the authoritative source only until cloud-backed Personal mode is ready. Its current history must be present before phone use begins, but a reusable Sheet-history importer would add permanent product surface and maintenance for a one-time transition.
+
+Some historical rep values are ranges such as `7–8` and `12–13`, while the app model uses one numeric result per set.
+
+### Options considered
+
+1. Build and maintain a reusable history-import feature in the app.
+2. Seed Personal history in the public source code.
+3. Run one private, repeatable migration operation against the cloud store during rehearsal and final cutover.
+
+### Decision
+
+We will run Sheet history migration as a private operational step after the cloud schema is ready and immediately before phone cutover. The public app will not expose a reusable Sheet-history import feature, and Personal records will not enter Git.
+
+Historical rep ranges will use the lower number of the range: `7–8` becomes `7`, and `12–13` becomes `12`. The original source text will remain in migration evidence or existing notes for auditability.
+
+### Rationale
+
+This keeps temporary migration complexity out of the daily product while still making the cutover complete and testable. A repeatable private operation supports rehearsal and duplicate checks without becoming a permanent user workflow.
+
+### Consequences
+
+- The cloud schema must exist before final history migration.
+- Migration logic may live in a temporary private script or controlled operator workflow and is not shipped in the public UI.
+- Rehearsal and final migration use stable IDs so reruns cannot duplicate records.
+- The final reconciliation report is retained privately; no Personal values are committed or pushed.
+
+### Revisit when
+
+Another user or recurring external source creates a genuine ongoing import need.

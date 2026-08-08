@@ -1,13 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AlertTriangle, ChevronRight, Search, ShieldCheck } from 'lucide-react'
-import { DEMO_TODAY } from '../data/seed'
 import { getDayName, proteinTargets } from '../domain/calculations'
 import { useFitness } from '../store/FitnessContext'
 import { Card, PageHeader, ProgressBar, SectionHeading } from '../components/ui'
 
 export function NutritionScreen() {
-  const { state } = useFitness()
-  const [selectedDay, setSelectedDay] = useState(getDayName(DEMO_TODAY))
+  const { state, today } = useFitness()
+  const todayName = getDayName(today)
+  const [selectedDay, setSelectedDay] = useState(todayName)
   const [query, setQuery] = useState('')
   const preset = state.mealPresets.find((item) => item.day === selectedDay) ?? state.mealPresets[0]
   const targets = proteinTargets(state.profile)
@@ -15,12 +15,14 @@ export function NutritionScreen() {
   const plannedCalories = preset.slots.reduce((sum, slot) => sum + slot.calories, 0)
   const foodItems = state.foodLibrary.filter((item) => item.name.toLowerCase().includes(query.toLowerCase()))
 
+  useEffect(() => setSelectedDay(todayName), [todayName])
+
   return (
     <div className="page nutrition-page">
       <PageHeader eyebrow="Preset-based, not gram-by-gram" title="Nutrition" detail="Know the plan. Log only what changed." />
 
       <div className="day-tabs" role="tablist" aria-label="Meal plan day">
-        {state.mealPresets.map((item) => <button role="tab" aria-selected={selectedDay === item.day} className={selectedDay === item.day ? 'active' : ''} onClick={() => setSelectedDay(item.day)} key={item.day}><span>{item.day.slice(0, 3)}</span><small>{item.day === getDayName(DEMO_TODAY) ? 'Today' : ''}</small></button>)}
+        {state.mealPresets.map((item) => <button role="tab" aria-selected={selectedDay === item.day} className={selectedDay === item.day ? 'active' : ''} onClick={() => setSelectedDay(item.day)} key={item.day}><span>{item.day.slice(0, 3)}</span><small>{item.day === todayName ? 'Today' : ''}</small></button>)}
       </div>
 
       <div className="nutrition-layout">
@@ -58,7 +60,7 @@ export function NutritionScreen() {
 
       <Card className="food-library-card">
         <SectionHeading title="Quick food reference" />
-        <div className="search-box"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search demo foods" /></div>
+        <div className="search-box"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search foods" /></div>
         <div className="food-table" role="table">
           {foodItems.map((item) => <div className="food-row" role="row" key={item.id}><div><strong>{item.name}</strong><span>{item.serving}</span></div><span>{item.proteinG} g</span><span>{item.calories} kcal</span><small>{item.allergenStatus}</small></div>)}
         </div>
