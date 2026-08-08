@@ -156,6 +156,7 @@ function makeWorkouts(): WorkoutSession[] {
 }
 
 export function createSyntheticState(): FitnessState {
+  const progressions = syntheticProgressions.map((progression) => ({ ...progression }))
   return {
     profile: {
       name: 'Demo Athlete',
@@ -174,12 +175,22 @@ export function createSyntheticState(): FitnessState {
     foodLibrary: syntheticFoodLibrary.map((item) => ({ ...item })),
     checkIns: makeCheckIns(),
     exercises: syntheticExercises.map((exercise) => ({ ...exercise, targetReps: [...exercise.targetReps] })),
-    progressions: syntheticProgressions.map((progression) => ({ ...progression })),
+    progressionBaselines: progressions.map((progression) => ({ ...progression })),
+    progressions,
     workouts: makeWorkouts(),
   }
 }
 
 export function createPersonalState(timezone = getSystemTimeZone()): FitnessState {
+  const progressions = syntheticProgressions.map((progression) => ({
+    ...progression,
+    currentWeightKg: 0,
+    lastResult: 'No result yet',
+    nextTarget: 'Choose a starting load',
+    limitingFactor: '',
+    decision: 'Repeat' as const,
+    notes: '',
+  }))
   return {
     profile: {
       name: 'Athlete',
@@ -198,15 +209,8 @@ export function createPersonalState(timezone = getSystemTimeZone()): FitnessStat
     foodLibrary: syntheticFoodLibrary.map((item) => ({ ...item })),
     checkIns: [],
     exercises: syntheticExercises.map((exercise) => ({ ...exercise, targetReps: [...exercise.targetReps] })),
-    progressions: syntheticProgressions.map((progression) => ({
-      ...progression,
-      currentWeightKg: 0,
-      lastResult: 'No result yet',
-      nextTarget: 'Choose a starting load',
-      limitingFactor: '',
-      decision: 'Repeat',
-      notes: '',
-    })),
+    progressionBaselines: progressions.map((progression) => ({ ...progression })),
+    progressions,
     workouts: [],
   }
 }

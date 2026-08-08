@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { DEMO_TODAY } from '../data/seed'
+import { createPersonalBackup, serializePersonalBackup, type PersonalBackup } from '../domain/backup'
 import { formatDateInTimeZone } from '../domain/date'
 import { createRecordId } from '../domain/ids'
 import { applyPersonalPresetBundle, type PersonalPresetBundle } from '../domain/presets'
-import { applyWorkoutCompletion, startWorkoutDraft } from '../domain/workout'
-import type { AppMode, DailyCheckIn, ExerciseResult, FitnessState, Profile, WorkoutCode } from '../domain/types'
-import { loadActiveMode, loadModeState, resetModeState, saveActiveMode, saveModeState } from './persistence'
+import { applyWorkoutCompletion, correctWorkoutSession, deleteWorkoutSession, startWorkoutDraft } from '../domain/workout'
+import type { AppMode, DailyCheckIn, ExerciseResult, FitnessState, Profile, WorkoutCode, WorkoutSession } from '../domain/types'
+import { loadActiveMode, loadModeState, normalizeState, resetModeState, saveActiveMode, saveModeState, savePreChangeBackup } from './persistence'
 
 interface FitnessContextValue {
   mode: AppMode
@@ -19,8 +20,11 @@ interface FitnessContextValue {
   updateDraftNotes: (notes: string) => void
   discardDraft: () => void
   completeWorkout: () => void
+  correctWorkout: (session: WorkoutSession) => void
+  deleteWorkout: (sessionId: string) => void
   updateProfile: (patch: Partial<Profile>) => void
   applyPersonalPresets: (bundle: PersonalPresetBundle) => void
+  restorePersonalBackup: (backup: PersonalBackup) => void
   resetCurrentMode: () => void
 }
 
@@ -49,6 +53,11 @@ function upsertCheckIn(state: FitnessState, checkIn: DailyCheckIn): FitnessState
 function loadWorkspace(): Workspace {
   const mode = loadActiveMode(window.localStorage)
   return { mode, state: loadModeState(window.localStorage, mode) }
+}
+
+function archivePersonalState(mode: AppMode, state: FitnessState) {
+  if (mode !== 'personal') return
+  savePreChangeBackup(window.localStorage, serializePersonalBackup(createPersonalBackup(state)))
 }
 
 export function FitnessProvider({ children }: { children: ReactNode }) {
@@ -136,6 +145,18 @@ export function FitnessProvider({ children }: { children: ReactNode }) {
         return { ...current, state: applyWorkoutCompletion(current.state, current.state.draftWorkout) }
       })
     },
+    correctWorkout(session) {
+      setWorkspace((current) => {
+        archivePersonalState(current.mode, current.state)
+        return { ...current, state: correctWorkoutSession(current.state, session) }
+      })
+    },
+    deleteWorkout(sessionId) {
+      setWorkspace((current) => {
+        archivePersonalState(current.mode, current.state)
+        return { ...current, state: deleteWorkoutSession(current.state, sessionId) }
+      })
+    },
     updateProfile(patch) {
       setWorkspace((current) => ({
         ...current,
@@ -148,8 +169,18 @@ export function FitnessProvider({ children }: { children: ReactNode }) {
         return { ...current, state: applyPersonalPresetBundle(current.state, bundle) }
       })
     },
+    restorePersonalBackup(backup) {
+      setWorkspace((current) => {
+        if (current.mode !== 'personal') return current
+        archivePersonalState(current.mode, current.state)
+        return { ...current, state: normalizeState(backup.state, 'personal') }
+      })
+    },
     resetCurrentMode() {
-      setWorkspace((current) => ({ ...current, state: resetModeState(window.localStorage, current.mode) }))
+      setWorkspace((current) => {
+        archivePersonalState(current.mode, current.state)
+        return { ...current, state: resetModeState(window.localStorage, current.mode) }
+      })
     },
   }), [mode, state, today])
 

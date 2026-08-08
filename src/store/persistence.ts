@@ -3,9 +3,10 @@ import { getSystemTimeZone } from '../domain/date'
 import { canCompleteCheckIn } from '../domain/checkIn'
 import type { AppMode, FitnessState } from '../domain/types'
 
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 3
 export const ACTIVE_MODE_KEY = 'getfit-active-mode-v1'
 export const LEGACY_DEMO_KEY = 'getfit-demo-state-v1'
+export const PRE_CHANGE_BACKUP_KEY = 'getfit-personal-pre-change-backup-v1'
 export const MODE_STORAGE_KEYS: Record<AppMode, string> = {
   demo: 'getfit-demo-state-v2',
   personal: 'getfit-personal-state-v1',
@@ -25,8 +26,11 @@ function initialState(mode: AppMode) {
   return mode === 'demo' ? createSyntheticState() : createPersonalState()
 }
 
-function normalizeState(state: FitnessState, mode: AppMode, inferLegacyCompletion = false): FitnessState {
+export function normalizeState(state: FitnessState, mode: AppMode, inferLegacyCompletion = false): FitnessState {
   const timezone = state.profile.timezone || (mode === 'demo' ? 'Asia/Calcutta' : getSystemTimeZone())
+  const progressionBaselines = state.progressionBaselines?.length
+    ? state.progressionBaselines
+    : state.progressions.map((progression) => ({ ...progression }))
   return {
     ...state,
     profile: {
@@ -46,6 +50,7 @@ function normalizeState(state: FitnessState, mode: AppMode, inferLegacyCompletio
         completedAt: entry.completedAt || (inferLegacyCompletion && canCompleteCheckIn(normalized) ? `${entry.date}T20:00:00.000Z` : undefined),
       }
     }),
+    progressionBaselines: progressionBaselines.map((progression) => ({ ...progression })),
   }
 }
 
@@ -108,4 +113,12 @@ export function saveModeState(storage: StorageAdapter, mode: AppMode, state: Fit
 export function resetModeState(storage: StorageAdapter, mode: AppMode) {
   storage.removeItem(MODE_STORAGE_KEYS[mode])
   return initialState(mode)
+}
+
+export function savePreChangeBackup(storage: StorageAdapter, serializedBackup: string) {
+  storage.setItem(PRE_CHANGE_BACKUP_KEY, serializedBackup)
+}
+
+export function loadPreChangeBackup(storage: StorageAdapter) {
+  return storage.getItem(PRE_CHANGE_BACKUP_KEY)
 }

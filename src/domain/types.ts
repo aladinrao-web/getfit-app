@@ -107,6 +107,7 @@ export interface FitnessState {
   foodLibrary: FoodReference[]
   checkIns: DailyCheckIn[]
   exercises: Exercise[]
+  progressionBaselines: ExerciseProgression[]
   progressions: ExerciseProgression[]
   workouts: WorkoutSession[]
   draftWorkout?: DraftWorkout

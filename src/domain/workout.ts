@@ -1,4 +1,4 @@
-import type { DraftWorkout, Exercise, ExerciseProgression, ExerciseResult, FitnessState, ProgressionDecision, WorkoutCode } from './types'
+import type { DraftWorkout, Exercise, ExerciseProgression, ExerciseResult, FitnessState, ProgressionDecision, WorkoutCode, WorkoutSession } from './types'
 import { createRecordId } from './ids'
 
 const cycle: WorkoutCode[] = ['A', 'B', 'C']
@@ -45,6 +45,68 @@ function nextTargetFor(decision: ProgressionDecision, result: ExerciseResult, pr
   return `${result.weightKg} kg × ${target}`
 }
 
+function progressionFromResult(result: ExerciseResult, progression: ExerciseProgression, exercise: Exercise): ExerciseProgression {
+  return {
+    ...progression,
+    currentWeightKg:
+      result.decision === 'Increase'
+        ? result.weightKg + progression.incrementKg
+        : result.decision === 'Deload'
+          ? Math.max(0, result.weightKg - progression.incrementKg)
+          : result.weightKg,
+    lastResult: formatExerciseResult(result),
+    nextTarget: nextTargetFor(result.decision, result, progression, exercise),
+    limitingFactor: result.limitingFactor,
+    decision: result.decision,
+    notes: result.formNotes || progression.notes,
+  }
+}
+
+function latestResultFor(state: FitnessState, exerciseId: string) {
+  return state.workouts
+    .flatMap((session) => session.results
+      .filter((result) => result.exerciseId === exerciseId)
+      .map((result) => ({ session, result })))
+    .sort((a, b) => b.session.date.localeCompare(a.session.date) || b.session.completedAt.localeCompare(a.session.completedAt))[0]
+}
+
+export function recomputeProgressions(state: FitnessState, affectedExerciseIds: Iterable<string>): FitnessState {
+  const affected = new Set(affectedExerciseIds)
+  if (!affected.size) return state
+
+  const progressions = state.progressions.map((progression) => {
+    if (!affected.has(progression.exerciseId)) return progression
+    const baseline = state.progressionBaselines.find((item) => item.exerciseId === progression.exerciseId) ?? progression
+    const exercise = state.exercises.find((item) => item.id === progression.exerciseId)
+    const latest = latestResultFor(state, progression.exerciseId)
+    if (!latest || !exercise) return { ...baseline }
+    return progressionFromResult(latest.result, baseline, exercise)
+  })
+
+  return { ...state, progressions }
+}
+
+export function correctWorkoutSession(state: FitnessState, corrected: WorkoutSession): FitnessState {
+  const existingIndex = state.workouts.findIndex((session) => session.id === corrected.id)
+  if (existingIndex < 0 || !corrected.results.length) return state
+  const existing = state.workouts[existingIndex]
+  const workouts = [...state.workouts]
+  workouts[existingIndex] = { ...corrected, completedAt: existing.completedAt }
+  return recomputeProgressions(
+    { ...state, workouts },
+    [...existing.results, ...corrected.results].map((result) => result.exerciseId),
+  )
+}
+
+export function deleteWorkoutSession(state: FitnessState, sessionId: string): FitnessState {
+  const existing = state.workouts.find((session) => session.id === sessionId)
+  if (!existing) return state
+  return recomputeProgressions(
+    { ...state, workouts: state.workouts.filter((session) => session.id !== sessionId) },
+    existing.results.map((result) => result.exerciseId),
+  )
+}
+
 export function applyWorkoutCompletion(state: FitnessState, draft: DraftWorkout, completedAt = new Date().toISOString()): FitnessState {
   const completedResults = draft.results.filter((result) => !result.skipped && result.reps.some((value) => value !== null))
   if (!completedResults.length) return state
@@ -62,26 +124,10 @@ export function applyWorkoutCompletion(state: FitnessState, draft: DraftWorkout,
   const workouts = [...state.workouts]
   if (existingIndex >= 0) workouts[existingIndex] = completedSession
   else workouts.push(completedSession)
+  const affectedExerciseIds = [
+    ...(existingSession?.results ?? []),
+    ...completedResults,
+  ].map((result) => result.exerciseId)
 
-  const progressions = state.progressions.map((progression) => {
-    const result = completedResults.find((item) => item.exerciseId === progression.exerciseId)
-    const exercise = state.exercises.find((item) => item.id === progression.exerciseId)
-    if (!result || !exercise) return progression
-    return {
-      ...progression,
-      currentWeightKg:
-        result.decision === 'Increase'
-          ? result.weightKg + progression.incrementKg
-          : result.decision === 'Deload'
-            ? Math.max(0, result.weightKg - progression.incrementKg)
-            : result.weightKg,
-      lastResult: formatExerciseResult(result),
-      nextTarget: nextTargetFor(result.decision, result, progression, exercise),
-      limitingFactor: result.limitingFactor,
-      decision: result.decision,
-      notes: result.formNotes || progression.notes,
-    }
-  })
-
-  return { ...state, workouts, progressions, draftWorkout: undefined }
+  return recomputeProgressions({ ...state, workouts, draftWorkout: undefined }, affectedExerciseIds)
 }
