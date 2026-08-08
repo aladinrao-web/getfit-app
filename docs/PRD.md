@@ -4,10 +4,10 @@
 | --- | --- |
 | Product | getFit |
 | Document status | Working baseline |
-| Version | 0.5 |
+| Version | 0.6 |
 | Product owner and primary user | Kovid |
 | Last updated | 2026-08-08 |
-| Repository baseline | `ac4cc75` — `feat: build getFit MVP` |
+| Repository baseline | `8dbade2` — `Merge Personal mode foundation` |
 | Companion record | [Decision log](DECISION_LOG.md) |
 
 ## 1. Purpose of this document
@@ -437,6 +437,7 @@ It's done when:
 | FR-PRG-03 | P0 | Explicit user decisions shall not be overwritten by automatic rules. | Unit |
 | FR-HIS-01 | P0 | History shall show committed sessions in reverse chronological order. | Unit + UI |
 | FR-HIS-02 | P0 | The app shall provide a deliberate correction path with impact preview. | Integration + E2E |
+| FR-HIS-03 | P0 | Editing or deleting a committed workout shall preserve its stable identity where applicable, save a recoverable pre-change copy, and recompute only affected exercise progression. | Unit + integration |
 | FR-TRD-01 | P0 | Weight points shall calculate a seven-day moving average from available observations. | Unit |
 | FR-TRD-02 | P0 | Recommendations shall wait for sufficient current and prior observations. | Unit |
 | FR-TRD-03 | P0 | Trends shall show data, interpretation, and next action separately. | UI review |
@@ -445,6 +446,7 @@ It's done when:
 | FR-DATA-03 | P0 | Personal data shall support validated export and restore. | Integration + E2E |
 | FR-DATA-04 | P0 | Persistence failure shall not present unsaved data as saved. | Failure test |
 | FR-DATA-05 | P0 | Actual Personal preset values and files shall remain excluded from source control and Demo mode. | Release audit |
+| FR-DATA-06 | P0 | Each exercise shall retain a configured progression baseline so deleting its only committed result has a deterministic fallback. | Unit |
 | FR-SYNC-01 | P0 | Personal mode shall persist the authoritative long-term record in an authenticated cloud data store. | Integration + E2E |
 | FR-SYNC-02 | P0 | Personal changes shall save to a local offline cache before background synchronization. | Integration + offline E2E |
 | FR-SYNC-03 | P0 | The interface shall show whether data is saved locally, syncing, synced, or failed. | UI + E2E |
@@ -597,6 +599,10 @@ It's done when:
 | TC-035 | P0 | Explicitly answer all meals and complete | One completed record is stored; Today shows completed and nutrition summaries include the day |
 | TC-036 | P0 | Migrate historical rep values `7–8` and `12–13` | App stores `7` and `12`; reconciliation evidence retains the original ranges |
 | TC-037 | P0 | Run the final Sheet migration twice in rehearsal | Stable IDs prevent duplicates and record counts remain unchanged |
+| TC-038 | P0 | Correct an older workout when a later result exists | The later explicit decision remains authoritative |
+| TC-039 | P0 | Delete the latest workout result for an exercise | Progression falls back to its previous committed result |
+| TC-040 | P0 | Delete the only workout result for an exercise | Progression returns to its configured baseline |
+| TC-041 | P0 | Restore a backup with a count mismatch or unsupported schema | Restore is rejected and current state remains untouched |
 
 ### Personal-use release gates
 
@@ -748,6 +754,7 @@ A requirement or story is done when:
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 0.6 | 2026-08-08 | Implemented versioned Personal backup and replace-only restore, pre-change safety copies, workout correction/deletion, and deterministic progression repair. |
 | 0.5 | 2026-08-08 | Made Sheet history migration a one-time private cutover operation and defined lower-bound normalization for historical rep ranges. |
 | 0.4 | 2026-08-08 | Defined staged daily check-ins: autosaved partial state, unanswered-versus-skipped semantics, immediate weight use, and explicit completion. |
 | 0.3 | 2026-08-08 | Added the private Personal preset import boundary: versioned configuration only, empty-workspace guard, and Git exclusion. |

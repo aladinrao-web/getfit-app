@@ -24,8 +24,8 @@ npm.cmd run build
 ## Data modes
 
 - **Demo** is the public default and uses deterministic synthetic history.
-- **Personal** is currently an isolated, disposable browser test workspace. It uses real timezone-aware dates but is not yet cloud-backed.
+- **Personal** is an isolated local test workspace with real timezone-aware dates. It now supports versioned full-workspace backup, replace-only restore, and recoverable workout corrections, but it is not yet cloud-backed or ready for phone cutover.
 
 Private Personal configuration can be imported from Settings as a versioned JSON preset. Keep those files under `.private/`; that directory is ignored by Git. Preset import contains configuration only and is available before Personal check-ins or workouts begin.
 
-The reference Google Sheet remains the operational source of truth until cloud persistence, recovery, and migration checks pass. No personal records or Sheet synchronization are included in this repository.
+The reference Google Sheet remains the operational source of truth until cloud persistence and migration checks pass. No personal records or Sheet synchronization are included in this repository.

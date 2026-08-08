@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { AlertCircle, ArrowLeft, Check, ChevronDown, Clock3, Dumbbell, Flag, RotateCcw, X } from 'lucide-react'
+import { AlertCircle, ArrowLeft, Check, ChevronDown, Clock3, Dumbbell, Flag, Pencil, RotateCcw, Save, Trash2, X } from 'lucide-react'
 import { formatLongDate, formatShortDate } from '../domain/calculations'
-import { formatExerciseResult, getNextWorkoutCode } from '../domain/workout'
+import { correctWorkoutSession, formatExerciseResult, getNextWorkoutCode } from '../domain/workout'
 import type { ExerciseResult, ProgressionDecision, WorkoutCode, WorkoutSession } from '../domain/types'
 import { useFitness } from '../store/FitnessContext'
 import { Button, Card, Field, PageHeader, SectionHeading, StatusPill } from '../components/ui'
@@ -11,9 +11,10 @@ const limiters = ['', 'General fatigue', 'Form breakdown', 'Stability', 'Pain / 
 const decisions: ProgressionDecision[] = ['Increase', 'Repeat', 'Deload', 'Technique focus']
 
 export function TrainScreen() {
-  const { state, startWorkout } = useFitness()
+  const { mode, state, startWorkout, correctWorkout, deleteWorkout } = useFitness()
   const [completedMessage, setCompletedMessage] = useState('')
   const [selectedSession, setSelectedSession] = useState<WorkoutSession | null>(null)
+  const [showAllHistory, setShowAllHistory] = useState(false)
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -53,7 +54,7 @@ export function TrainScreen() {
       <Card className="history-card">
         <SectionHeading title="Workout history" action={<span className="muted-label">{sessions.length} sessions</span>} />
         <div className="session-list">
-          {sessions.slice(0, 6).map((session) => (
+          {sessions.slice(0, showAllHistory ? sessions.length : 6).map((session) => (
             <button className="session-row" onClick={() => setSelectedSession(session)} key={session.id}>
               <span className="workout-letter tiny">{session.workout}</span>
               <div><strong>{workoutNames[session.workout]}</strong><span>{formatShortDate(session.date)} · {session.results.length} exercises</span></div>
@@ -62,9 +63,24 @@ export function TrainScreen() {
             </button>
           ))}
         </div>
+        {sessions.length > 6 && <Button variant="ghost" onClick={() => setShowAllHistory((current) => !current)}>{showAllHistory ? 'Show recent only' : `Show all ${sessions.length} sessions`}</Button>}
       </Card>
 
-      {selectedSession && <SessionDetail session={selectedSession} onClose={() => setSelectedSession(null)} />}
+      {selectedSession && <SessionDetail
+        session={selectedSession}
+        canCorrect={mode === 'personal'}
+        onClose={() => setSelectedSession(null)}
+        onCorrect={(session) => {
+          correctWorkout(session)
+          setSelectedSession(null)
+          setCompletedMessage('Workout corrected. A safety copy was saved and affected progression targets were recomputed.')
+        }}
+        onDelete={(sessionId) => {
+          deleteWorkout(sessionId)
+          setSelectedSession(null)
+          setCompletedMessage('Workout deleted. A safety copy was saved and affected progression targets were recomputed.')
+        }}
+      />}
     </div>
   )
 }
@@ -155,7 +171,7 @@ function ActiveWorkout({ onCompleted }: { onCompleted: () => void }) {
   )
 }
 
-function SessionDetail({ session, onClose }: { session: WorkoutSession; onClose: () => void }) {
+function SessionReadOnlyDetail({ session, onClose }: { session: WorkoutSession; onClose: () => void }) {
   const { state } = useFitness()
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Workout details">
@@ -166,6 +182,80 @@ function SessionDetail({ session, onClose }: { session: WorkoutSession; onClose:
         </div>
         {session.sessionNotes && <p className="session-note"><strong>Session note</strong>{session.sessionNotes}</p>}
         <Button onClick={onClose}>Done</Button>
+      </Card>
+    </div>
+  )
+}
+
+function SessionDetail({ session, canCorrect, onClose, onCorrect, onDelete }: { session: WorkoutSession; canCorrect: boolean; onClose: () => void; onCorrect: (session: WorkoutSession) => void; onDelete: (sessionId: string) => void }) {
+  const { state } = useFitness()
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<WorkoutSession>(() => structuredClone(session))
+
+  if (!canCorrect) return <SessionReadOnlyDetail session={session} onClose={onClose} />
+
+  function updateResult(exerciseId: string, patch: Partial<ExerciseResult>) {
+    setDraft((current) => ({
+      ...current,
+      results: current.results.map((result) => result.exerciseId === exerciseId ? { ...result, ...patch } : result),
+    }))
+  }
+
+  function updateRep(result: ExerciseResult, index: number, value: string) {
+    const reps = [...result.reps]
+    reps[index] = value === '' ? null : Number(value)
+    updateResult(result.exerciseId, { reps })
+  }
+
+  function handleDelete() {
+    if (!window.confirm(`Delete Workout ${session.workout} from ${formatLongDate(session.date)}? A recoverable safety copy will be saved first.`)) return
+    onDelete(session.id)
+  }
+
+  const previewState = correctWorkoutSession(state, draft)
+  const progressionPreview = draft.results.map((result) => ({
+    exerciseId: result.exerciseId,
+    exercise: state.exercises.find((item) => item.id === result.exerciseId),
+    progression: previewState.progressions.find((item) => item.exerciseId === result.exerciseId),
+  }))
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Workout details">
+      <Card className="review-modal session-modal correction-modal">
+        <div className="modal-head"><div><p className="eyebrow">{editing ? 'Correct completed workout' : formatLongDate(session.date)}</p><h2>Workout {session.workout}</h2><p>{workoutNames[session.workout]}</p></div><button className="icon-button" onClick={onClose} aria-label="Close workout details"><X size={21} /></button></div>
+        {!editing ? <>
+          <div className="review-list detail-list">
+            {session.results.map((result) => <div key={result.exerciseId}><div><strong>{state.exercises.find((exercise) => exercise.id === result.exerciseId)?.name}</strong><span>{formatExerciseResult(result)}{result.limitingFactor ? ` · ${result.limitingFactor}` : ''}</span></div><StatusPill status={result.decision} /></div>)}
+          </div>
+          {session.sessionNotes && <p className="session-note"><strong>Session note</strong>{session.sessionNotes}</p>}
+          <div className="modal-actions session-detail-actions">
+            <Button variant="danger" onClick={handleDelete}><Trash2 size={17} />Delete</Button>
+            <Button variant="secondary" onClick={() => setEditing(true)}><Pencil size={17} />Correct</Button>
+            <Button onClick={onClose}>Done</Button>
+          </div>
+        </> : <>
+          <div className="correction-fields">
+            <Field label="Workout date"><input type="date" value={draft.date} onChange={(event) => setDraft((current) => ({ ...current, date: event.target.value }))} /></Field>
+            {draft.results.map((result) => {
+              const exercise = state.exercises.find((item) => item.id === result.exerciseId)
+              return <div className="correction-exercise" key={result.exerciseId}>
+                <div className="correction-exercise-head"><strong>{exercise?.name ?? result.exerciseId}</strong><button className="text-danger-button" onClick={() => setDraft((current) => ({ ...current, results: current.results.filter((item) => item.exerciseId !== result.exerciseId) }))}><Trash2 size={15} />Remove</button></div>
+                <div className="set-entry-grid correction-set-grid">
+                  <Field label="Weight"><div className="unit-input compact"><input type="number" min="0" step="0.5" value={result.weightKg} onChange={(event) => updateResult(result.exerciseId, { weightKg: Number(event.target.value) })} /><span>kg</span></div></Field>
+                  {result.reps.map((rep, index) => <Field key={index} label={`Set ${index + 1}`}><div className="unit-input compact"><input type="number" min="0" value={rep ?? ''} onChange={(event) => updateRep(result, index, event.target.value)} /><span>reps</span></div></Field>)}
+                </div>
+                <div className="detail-fields correction-detail-fields">
+                  <Field label="Limiting factor"><select value={result.limitingFactor} onChange={(event) => updateResult(result.exerciseId, { limitingFactor: event.target.value })}>{limiters.map((limiter) => <option value={limiter} key={limiter}>{limiter || 'Nothing notable'}</option>)}</select></Field>
+                  <Field label="Progression decision"><select value={result.decision} onChange={(event) => updateResult(result.exerciseId, { decision: event.target.value as ProgressionDecision })}>{decisions.map((decision) => <option key={decision}>{decision}</option>)}</select></Field>
+                  <Field label="Form note"><textarea rows={2} value={result.formNotes} onChange={(event) => updateResult(result.exerciseId, { formNotes: event.target.value })} /></Field>
+                </div>
+              </div>
+            })}
+            <Field label="Session note"><textarea rows={2} value={draft.sessionNotes} onChange={(event) => setDraft((current) => ({ ...current, sessionNotes: event.target.value }))} /></Field>
+          </div>
+          <div className="correction-note"><RotateCcw size={17} /><div><strong>Progression impact after saving</strong><span>This session keeps its ID; later results still win.</span><ul>{progressionPreview.map(({ exerciseId, exercise, progression }) => <li key={exerciseId}><span>{exercise?.name ?? exerciseId}</span><strong>{progression?.nextTarget ?? 'No target change'}</strong></li>)}</ul></div></div>
+          <div className="modal-actions"><Button variant="secondary" onClick={() => { setDraft(structuredClone(session)); setEditing(false) }}><ArrowLeft size={17} />Cancel</Button><Button disabled={!draft.date || !draft.results.length || draft.results.some((result) => !result.reps.some((rep) => rep !== null))} onClick={() => onCorrect(draft)}><Save size={17} />Save correction</Button></div>
+        </>}
       </Card>
     </div>
   )

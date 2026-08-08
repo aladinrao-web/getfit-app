@@ -307,6 +307,18 @@ p { color: var(--muted); line-height: 1.55; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 .session-modal .button { width: 100%; }
 .session-note { display: flex; flex-direction: column; gap: 5px; padding: 12px; border-radius: 10px; background: #f3f4f0; font-size: .76rem; }
+.correction-modal { width: min(780px, 100%); }
+.correction-fields { display: grid; gap: 15px; margin-top: 18px; }
+.correction-exercise { display: grid; gap: 12px; padding: 15px; border: 1px solid var(--line); border-radius: 13px; background: #fbfcf9; }
+.correction-exercise-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.text-danger-button { display: inline-flex; align-items: center; gap: 5px; border: 0; background: transparent; color: var(--red); font-size: .7rem; font-weight: 720; }
+.correction-detail-fields { margin-top: 0; }
+.correction-note { display: flex; align-items: flex-start; gap: 9px; margin-top: 15px; padding: 12px; border-radius: 10px; background: #eef3f1; color: #49685f; font-size: .69rem; }
+.correction-note > div { display: grid; flex: 1; gap: 3px; }
+.correction-note > div > span { color: var(--muted); }
+.correction-note ul { display: grid; gap: 5px; margin: 7px 0 0; padding: 0; list-style: none; }
+.correction-note li { display: flex; justify-content: space-between; gap: 12px; }
+.correction-note li strong { text-align: right; }
 
 /* Progression */
 .progress-summary-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 20px; }
@@ -390,6 +402,14 @@ p { color: var(--muted); line-height: 1.55; }
 .preset-file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .preset-file-button.disabled { cursor: not-allowed; opacity: .45; }
 .preset-status { display: block; margin-top: 8px; color: var(--green-2); font-size: .74rem; font-weight: 700; }
+.data-safety-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 14px; padding: 20px 23px; border-color: #cbded7; background: #f9fdfb; }
+.data-safety-card h2 { margin-bottom: 4px; font-size: 1.15rem; }
+.data-safety-card p { max-width: 650px; margin-bottom: 0; font-size: .8rem; }
+.data-safety-actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.backup-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin: 18px 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--line); }
+.backup-summary div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 12px; background: white; }
+.backup-summary dt { color: var(--muted); font-size: .7rem; }
+.backup-summary dd { margin: 0; font-size: .75rem; font-weight: 720; }
 .settings-layout > div { display: grid; gap: 13px; }
 .settings-layout > div > .card, .settings-layout aside > .card { padding: 23px; }
 .settings-layout aside { display: grid; gap: 13px; }
@@ -428,7 +448,8 @@ p { color: var(--muted); line-height: 1.55; }
   .dashboard-hero-grid, .two-column-layout, .checkin-layout, .nutrition-layout, .settings-layout, .trends-bottom-grid { grid-template-columns: 1fr; }
   .mode-switch-card { align-items: stretch; flex-direction: column; }
   .mode-switch { flex-basis: auto; }
-  .preset-import-card { align-items: stretch; flex-direction: column; }
+  .preset-import-card, .data-safety-card { align-items: stretch; flex-direction: column; }
+  .data-safety-actions { justify-content: flex-start; }
   .preset-file-button { width: 100%; }
   .sticky-card { position: static; }
   .workout-plan-grid { grid-template-columns: 1fr; }
@@ -497,6 +518,7 @@ p { color: var(--muted); line-height: 1.55; }
   .review-list > div { align-items: flex-start; }
   .modal-actions { flex-direction: column-reverse; }
   .modal-actions .button { width: 100%; }
+  .backup-summary { grid-template-columns: 1fr; }
   .progress-summary-grid { grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
   .progress-summary-grid .card { min-height: 105px; display: flex; flex-direction: column; align-items: flex-start; padding: 13px; }
   .progress-summary-grid .icon-tile { width: 34px; height: 34px; border-radius: 10px; }

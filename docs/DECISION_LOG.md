@@ -712,6 +712,7 @@ Replacement is easier to explain, test, and recover than merge while still provi
 - Merge import is explicitly out of scope for Personal v1.
 - Import UI must state that current Personal data will be replaced.
 - Backup creation and validation are part of the same guarded operation.
+- The implemented restore retains the pre-change snapshot in the browser and downloads a portable copy before replacement.
 
 ### Revisit when
 
@@ -747,6 +748,7 @@ This restores consistency while respecting the user's explicit historical decisi
 - Correction review must preview the affected exercise and next target.
 - Deleting the latest result falls back to the previous committed result.
 - Deterministic correction tests are required.
+- The implemented fallback returns to the configured exercise baseline when no committed result remains.
 
 ### Revisit when
 

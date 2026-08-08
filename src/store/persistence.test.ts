@@ -75,4 +75,16 @@ describe('mode persistence', () => {
     expect(migrated.checkIns[0].updatedAt).toBeTruthy()
     expect(migrated.checkIns[0].completedAt).toBeTruthy()
   })
+
+  it('creates correction baselines when loading a pre-schema-three workspace', () => {
+    const storage = new MemoryStorage()
+    const current = createSyntheticState()
+    const { progressionBaselines: _progressionBaselines, ...state } = current
+    storage.setItem(MODE_STORAGE_KEYS.demo, JSON.stringify({ schemaVersion: 2, mode: 'demo', createdAt: '2026-08-08T10:00:00.000Z', updatedAt: '2026-08-08T10:00:00.000Z', state }))
+
+    const migrated = loadModeState(storage, 'demo')
+
+    expect(migrated.progressionBaselines).toEqual(migrated.progressions)
+    expect(migrated.progressionBaselines).not.toBe(migrated.progressions)
+  })
 })
