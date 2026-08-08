@@ -2,6 +2,11 @@
 
 A mobile-first lean-gain and beginner-strength tracker built around fast meal check-ins, seven-day weight trends, and deliberate workout progression.
 
+## Product documentation
+
+- [Personal-use PRD](docs/PRD.md) — product outcomes, user stories, requirements, test strategy, risks, and release gates.
+- [Decision log](docs/DECISION_LOG.md) — timeline, rationale, alternatives, consequences, and revisit triggers for material decisions.
+
 ## Run locally
 
 ```powershell
