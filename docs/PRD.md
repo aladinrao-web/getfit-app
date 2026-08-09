@@ -4,10 +4,10 @@
 | --- | --- |
 | Product | getFit |
 | Document status | Working baseline |
-| Version | 0.8 |
+| Version | 0.9 |
 | Product owner and primary user | Kovid |
 | Last updated | 2026-08-09 |
-| Repository baseline | `7dfc96c` — `Merge PR #3: Add Supabase personal cloud sync` |
+| Repository baseline | `c0a5fc0` — `Merge PR #4: Add explicit cloud conflict recovery` |
 | Companion record | [Decision log](DECISION_LOG.md) |
 
 ## 1. Purpose of this document
@@ -470,6 +470,8 @@ It's done when:
 | FR-DEMO-02 | P1 | Repository and public build shall contain no Personal records. | Release audit |
 | FR-PORT-01 | P1 | README shall explain problem, hypothesis, scope, decisions, architecture, evidence, demo, and next steps. | Documentation review |
 | FR-PORT-02 | P1 | Public demo shall be usable without credentials. | Deployment smoke test |
+| FR-PORT-03 | P0 | The production app shall expose sign-in only for Personal access, and the hosted Supabase project shall reject creation of new accounts after the owner account is confirmed. | UI audit + Auth settings check |
+| FR-PORT-04 | P0 | PWA navigation, icons, assets, and offline fallback shall work from the configured hosting subpath, and the service worker shall never cache cross-origin Supabase responses. | Build verification + offline smoke test |
 
 ## 11. Data model and integrity rules
 
@@ -615,6 +617,7 @@ The Personal mode release is ready only when:
 - TC-032 through TC-035 pass on the release build.
 - No known path creates duplicate committed sessions or silently loses a draft.
 - Authenticated cloud persistence, offline queueing, reconnect, and recovery are proven on phone and desktop.
+- The hosted Auth project has exactly the intended confirmed account and rejects new signups.
 - Export and replace-only restore are proven with a fresh browser profile.
 - A Sheet migration rehearsal and reconciliation pass before final cutover.
 - Compact-screen and keyboard walkthroughs have no blocking issue.
@@ -734,7 +737,7 @@ Status: complete at `ac4cc75`.
 | OQ-04 | Should the A/B/C plan be configurable in Milestone 1 or after dogfood? | First real plan change | Open |
 | OQ-05 | What minimum observations should unlock weight recommendations? | Four-week data review | Open; current hypothesis is 4 + 4 observations |
 | OQ-06 | Should Personal and Demo mode share settings such as theme only? | Mode architecture design | Resolved for Personal v1: share no fitness data or settings; reconsider UI-only preferences later |
-| OQ-07 | What hosting target best supports private phone validation and a public PWA demo? | Milestone 2 and 4 planning | Open |
+| OQ-07 | What hosting target best supports private phone validation and a public PWA demo? | Milestone 2 and 4 planning | Proposed: GitHub Pages once public repository visibility is explicitly approved; the current plan does not support Pages while the repository is private |
 | OQ-08 | Which product-usage metrics can be computed locally without telemetry? | Dogfood instrumentation planning | Open |
 | OQ-09 | Which cloud/authentication service best meets offline, privacy, recovery, and maintenance needs? | Milestone 2 architecture comparison | Resolved: Supabase Auth + Postgres, local-first client, RLS, and revisioned snapshots |
 
@@ -755,6 +758,7 @@ A requirement or story is done when:
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 0.9 | 2026-08-09 | Added the production sign-in-only boundary, repository-subpath PWA requirements, and the proposed GitHub Pages target with its visibility gate. |
 | 0.8 | 2026-08-09 | Specified explicit whole-copy conflict recovery, displaced-copy backup, and compare-and-swap revalidation. |
 | 0.7 | 2026-08-08 | Selected Supabase, specified the revisioned snapshot and RLS boundary, added cloud access-control requirements, and resolved OQ-09. |
 | 0.6 | 2026-08-08 | Implemented versioned Personal backup and replace-only restore, pre-change safety copies, workout correction/deletion, and deterministic progression repair. |

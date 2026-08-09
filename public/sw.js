@@ -1,5 +1,6 @@
-const CACHE = 'getfit-shell-v1'
-const SHELL = ['/', '/manifest.webmanifest', '/icon.svg']
+const CACHE = 'getfit-shell-v2'
+const APP_SCOPE = self.registration.scope
+const SHELL = [APP_SCOPE, new URL('manifest.webmanifest', APP_SCOPE).href, new URL('icon.svg', APP_SCOPE).href]
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)))
@@ -17,13 +18,25 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
+  const requestUrl = new URL(event.request.url)
+  if (requestUrl.origin !== self.location.origin) return
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        const copy = response.clone()
-        caches.open(CACHE).then((cache) => cache.put(event.request, copy))
+        if (response.ok) {
+          const copy = response.clone()
+          caches.open(CACHE).then((cache) => cache.put(event.request, copy))
+        }
         return response
       })
-      .catch(() => caches.match(event.request).then((cached) => cached || caches.match('/'))),
+      .catch(async () => {
+        const cached = await caches.match(event.request)
+        if (cached) return cached
+        if (event.request.mode === 'navigate') {
+          return (await caches.match(APP_SCOPE)) || new Response('getFit is offline.', { status: 503 })
+        }
+        return new Response('Offline', { status: 503 })
+      }),
   )
 })

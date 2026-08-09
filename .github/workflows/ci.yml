@@ -37,3 +37,6 @@ jobs:
 
       - name: Build production bundle
         run: npm run build
+
+      - name: Verify deployment assets
+        run: npm run verify:deploy

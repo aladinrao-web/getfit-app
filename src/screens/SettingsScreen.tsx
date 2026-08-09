@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { AlertTriangle, ArchiveRestore, Cloud, CloudOff, Database, FileDown, FileUp, LogIn, LogOut, RefreshCw, RotateCcw, Save, Settings2, ShieldCheck, UserPlus, UserRound, X } from 'lucide-react'
+import { AlertTriangle, ArchiveRestore, Cloud, CloudOff, Database, FileDown, FileUp, LogIn, LogOut, RefreshCw, RotateCcw, Save, Settings2, ShieldCheck, UserRound, X } from 'lucide-react'
 import { createPersonalBackup, parsePersonalBackup, serializePersonalBackup, type PersonalBackup } from '../domain/backup'
 import { parsePersonalPresetBundle } from '../domain/presets'
 import { normalizeNumericDraft } from '../domain/numeric'
@@ -104,15 +104,6 @@ export function SettingsScreen() {
     setPassword('')
   }
 
-  async function handleSignUp() {
-    if (!email.trim() || password.length < 8) {
-      window.alert('Enter your email and a password with at least 8 characters.')
-      return
-    }
-    await cloud.signUp(email, password)
-    setPassword('')
-  }
-
   function handleReset() {
     const label = mode === 'demo' ? 'synthetic demo' : 'Personal test workspace'
     if (!window.confirm(`Reset all check-ins, workouts, drafts, and settings in the ${label}? The other mode will not change.`)) return
@@ -200,7 +191,7 @@ export function SettingsScreen() {
           <p aria-live="polite">{cloud.message}</p>
           {cloud.lastSyncedAt && <small>Last cloud revision received {new Date(cloud.lastSyncedAt).toLocaleString()}</small>}
         </div>
-        {!cloud.configured ? <p className="cloud-config-note">Add the Supabase project URL and publishable key to this deployment.</p> : cloudConnected ? <div className="cloud-sync-actions"><Button variant="secondary" disabled={cloud.syncStatus === 'syncing' || Boolean(cloud.conflict)} onClick={() => void cloud.syncNow()}><RefreshCw size={18} />Sync now</Button><Button variant="ghost" disabled={cloud.authBusy || cloud.resolutionBusy} onClick={() => void cloud.signOut()}><LogOut size={18} />Sign out</Button></div> : <form className="cloud-auth-form" onSubmit={(event) => void handleSignIn(event)}><Field label="Email"><input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></Field><Field label="Password"><input type="password" autoComplete="current-password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} /></Field><div><Button type="submit" disabled={cloud.authBusy || cloud.authStatus === 'loading'}><LogIn size={18} />Sign in</Button><Button type="button" variant="secondary" disabled={cloud.authBusy || cloud.authStatus === 'loading'} onClick={() => void handleSignUp()}><UserPlus size={18} />Create account</Button><Button type="button" variant="ghost" disabled={cloud.authBusy || !email.trim()} onClick={() => void cloud.resendConfirmation(email)}>Resend confirmation</Button></div></form>}
+        {!cloud.configured ? <p className="cloud-config-note">Add the Supabase project URL and publishable key to this deployment.</p> : cloudConnected ? <div className="cloud-sync-actions"><Button variant="secondary" disabled={cloud.syncStatus === 'syncing' || Boolean(cloud.conflict)} onClick={() => void cloud.syncNow()}><RefreshCw size={18} />Sync now</Button><Button variant="ghost" disabled={cloud.authBusy || cloud.resolutionBusy} onClick={() => void cloud.signOut()}><LogOut size={18} />Sign out</Button></div> : <form className="cloud-auth-form" onSubmit={(event) => void handleSignIn(event)}><Field label="Email"><input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></Field><Field label="Password"><input type="password" autoComplete="current-password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} /></Field><div><Button type="submit" disabled={cloud.authBusy || cloud.authStatus === 'loading'}><LogIn size={18} />Sign in</Button></div><small>Personal access is limited to the existing account; this public app does not create new accounts.</small></form>}
         {cloud.conflict && <CloudConflictPanel conflict={cloud.conflict} deviceSummary={{ checkIns: state.checkIns.length, workouts: state.workouts.length, progressionTargets: state.progressions.length, hasWorkoutDraft: Boolean(state.draftWorkout) }} resolutionBusy={cloud.resolutionBusy} onResolve={(choice) => void handleConflictResolution(choice)} />}
       </Card>}
 

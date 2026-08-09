@@ -37,8 +37,6 @@ export interface PersonalCloudValue {
   conflict: PersonalCloudConflict | null
   resolutionBusy: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string) => Promise<void>
-  resendConfirmation: (email: string) => Promise<void>
   signOut: () => Promise<void>
   syncNow: () => Promise<void>
   resolveConflict: (choice: ConflictResolutionChoice) => Promise<void>
@@ -368,46 +366,9 @@ export function usePersonalCloud({ mode, state, onRemoteState }: PersonalCloudOp
     if (error) {
       setSyncStatus('error')
       setMessage(error.code === 'email_not_confirmed'
-        ? 'Confirm your email before signing in, or resend the confirmation below.'
+        ? 'This Personal account must be confirmed in Supabase before signing in.'
         : `Sign-in failed: ${error.message}`)
     }
-  }
-
-  async function signUp(email: string, password: string) {
-    if (!supabase) return
-    setAuthBusy(true)
-    setMessage('Creating your account…')
-    const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
-    setAuthBusy(false)
-    if (error) {
-      setSyncStatus('error')
-      setMessage(`Account creation failed: ${error.message}`)
-      return
-    }
-    if (!data.session) {
-      setSyncStatus('local-only')
-      setMessage('Account created. Confirm the email from Supabase, then return here to sign in.')
-    }
-  }
-
-  async function resendConfirmation(email: string) {
-    if (!supabase || !email.trim()) return
-    setAuthBusy(true)
-    setMessage('Sending a fresh confirmation email…')
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: email.trim(),
-    })
-    setAuthBusy(false)
-    if (error) {
-      setSyncStatus('error')
-      setMessage(error.code === 'over_email_send_rate_limit'
-        ? 'Please wait a minute before requesting another confirmation email.'
-        : `Confirmation email failed: ${error.message}`)
-      return
-    }
-    setSyncStatus('local-only')
-    setMessage('Confirmation email sent. Check your inbox and spam folder, then return here to sign in.')
   }
 
   async function signOut() {
@@ -554,8 +515,6 @@ export function usePersonalCloud({ mode, state, onRemoteState }: PersonalCloudOp
     conflict,
     resolutionBusy,
     signIn,
-    signUp,
-    resendConfirmation,
     signOut,
     syncNow,
     resolveConflict,
