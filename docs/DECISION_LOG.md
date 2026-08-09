@@ -92,6 +92,7 @@ Evidence or condition that should reopen the decision.
 | [D-022](#d-022--migrate-sheet-history-once-at-cloud-cutover) | 2026-08-08 | Accepted | Load Sheet history once into the private cloud store | Avoid productizing a temporary migration path |
 | [D-023](#d-023--use-supabase-and-a-revisioned-personal-snapshot) | 2026-08-08 | Accepted | Use Supabase Auth, RLS, and one revisioned state snapshot per user | Preserve atomic app behavior with low operating complexity |
 | [D-024](#d-024--resolve-cloud-conflicts-by-explicit-whole-copy-selection) | 2026-08-09 | Accepted | Compare both snapshots and require an explicit cloud-or-device choice | Preserve deliberate fitness state without unsafe automatic merges |
+| [D-025](#d-025--target-github-pages-behind-an-explicit-public-repository-gate) | 2026-08-09 | Accepted | Publish the audited repository and deploy through GitHub Pages | Align hosting with proof of work while keeping Personal data behind authentication and RLS |
 
 ## Timeline
 
@@ -143,6 +144,15 @@ Evidence or condition that should reopen the decision.
 - The user must select the complete cloud copy or complete device copy; the app does not merge fields or records automatically.
 - The displaced copy becomes the latest browser safety backup before replacement.
 - Keeping the device copy writes against the reviewed cloud revision, so another concurrent cloud change reopens comparison instead of being overwritten.
+
+### 2026-08-09 — Production deployment readiness
+
+- The hosted Supabase project contains one confirmed account, but new signup remains enabled and must be closed before the public URL is released.
+- Public account-creation controls are removed from the app; Personal mode becomes sign-in-only.
+- GitHub Pages is the proposed hosting target because it connects the running artifact to the proof-of-work repository without another platform.
+- GitHub rejected Pages activation while the repository is private on the current plan, so repository visibility remains an explicit owner decision rather than an inferred deployment step.
+- The full Git history scan found no credential-shaped values, Personal email, Google Sheet link, or private data file; synthetic environment placeholders remain intentionally versioned.
+- PWA paths become deployment-relative and the service worker is restricted to same-origin shell assets so it cannot cache Supabase API responses.
 
 ## D-001 — Use the existing tracker and strength plan as product references
 
@@ -993,3 +1003,41 @@ Whole-copy selection preserves the atomic relationship between workout completio
 ### Revisit when
 
 Conflict frequency becomes material, multiple people edit the same workspace, or record-level synchronization can preserve workout and progression invariants with equal clarity.
+
+## D-025 — Target GitHub Pages behind an explicit public repository gate
+
+- Date: 2026-08-09
+- Status: Accepted
+- Owners: Product, Engineering
+- Related: D-007, D-010, D-016, D-023, FR-PORT-02 through FR-PORT-04, OQ-07
+
+### Context
+
+getFit needs one stable HTTPS PWA URL for daily phone use and a public synthetic demo for GitHub proof of work. The app is a static Vite client and already uses Supabase for authenticated Personal persistence, so the host does not need a second backend. The repository is currently private, and GitHub reports that the current plan does not support Pages for a private repository.
+
+### Options considered
+
+1. Make the audited repository public and deploy through GitHub Pages at no additional platform cost.
+2. Keep the repository private and upgrade the GitHub plan for private-repository Pages.
+3. Keep the repository private and add a separate static-hosting provider.
+
+### Decision
+
+GitHub Pages is the production target. On 2026-08-09, the owner explicitly approved public repository visibility after the full Git history passed the privacy and secret audit and Supabase public signup was disabled. The audited repository will be made public, PR #5 will be merged, and its deployment workflow will publish the PWA.
+
+The production build opens in synthetic Demo mode. Personal mode exposes sign-in only for the existing account. Supabase public signup is disabled, and the deployment uses only the publishable browser key. The PWA supports the `/getfit-app/` project path and restricts its service-worker cache to same-origin application assets.
+
+### Rationale
+
+GitHub Pages makes the running product, source, CI, product documentation, and decision history one inspectable proof-of-work system. It avoids another vendor and recurring deployment configuration while serving the static PWA over HTTPS. Keeping visibility as a separate approval gate prevents deployment convenience from weakening the privacy review.
+
+### Consequences
+
+- The full Git history must pass a privacy and secret audit before visibility changes.
+- A private repository requires either a paid GitHub plan or a different host.
+- The public site can expose Demo mode safely, while Personal records remain behind Supabase authentication and RLS.
+- Public signup remains disabled; the deployment uses only the publishable browser key and relies on authenticated, owner-scoped RLS for Personal records.
+
+### Revisit when
+
+The repository must remain private, the user chooses a custom domain or preview environments, or another host materially improves reliability without adding operating complexity.

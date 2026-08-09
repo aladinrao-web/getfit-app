@@ -415,6 +415,7 @@ p { color: var(--muted); line-height: 1.55; }
 .cloud-auth-form { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr); width: 100%; gap: 10px; }
 .cloud-auth-form .field { margin: 0; }
 .cloud-auth-form > div { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
+.cloud-auth-form > small { grid-column: 1 / -1; color: var(--muted); font-size: .68rem; line-height: 1.45; }
 .cloud-sync-actions { display: flex; justify-self: end; gap: 8px; }
 .cloud-config-note { max-width: 380px; margin: 0; color: var(--muted); font-size: .75rem; }
 .mobile-settings-button { position: relative; }
