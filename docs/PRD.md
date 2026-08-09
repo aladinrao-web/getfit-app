@@ -4,7 +4,7 @@
 | --- | --- |
 | Product | getFit |
 | Document status | Working baseline |
-| Version | 1.0 |
+| Version | 1.1 |
 | Product owner and primary user | Kovid |
 | Last updated | 2026-08-09 |
 | Repository baseline | `c0a5fc0` — `Merge PR #4: Add explicit cloud conflict recovery` |
@@ -758,6 +758,7 @@ A requirement or story is done when:
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.1 | 2026-08-09 | Implemented the portable Personal snapshot package with restorable JSON, Sheet-ready CSV files, and a reconciliation manifest. |
 | 1.0 | 2026-08-09 | Approved public repository visibility and GitHub Pages as the production PWA host after the privacy, secret, and signup gates passed. |
 | 0.9 | 2026-08-09 | Added the production sign-in-only boundary, repository-subpath PWA requirements, and the proposed GitHub Pages target with its visibility gate. |
 | 0.8 | 2026-08-09 | Specified explicit whole-copy conflict recovery, displaced-copy backup, and compare-and-swap revalidation. |
