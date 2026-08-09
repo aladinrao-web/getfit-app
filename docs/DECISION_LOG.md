@@ -1041,3 +1041,41 @@ GitHub Pages makes the running product, source, CI, product documentation, and d
 ### Revisit when
 
 The repository must remain private, the user chooses a custom domain or preview environments, or another host materially improves reliability without adding operating complexity.
+
+## D-026: Execute the Sheet cutover as one guarded snapshot replacement
+
+- Date: 2026-08-09
+- Status: Accepted
+- Owners: Product, Engineering
+- Related: D-017, D-019, D-022, D-023
+
+### Context
+
+Cloud-backed Personal mode, offline recovery, cross-device sync, and portable export have passed cutover validation. The Sheet still contains the historical check-ins, completed exercise results, and current progression targets that must be present before the app becomes the daily system of record. The public repository must not contain Personal fitness values or a permanent Sheet importer.
+
+### Options considered
+
+1. Add a reusable Sheet-import screen to the product.
+2. Copy historical records manually through the app.
+3. Build a private backup-format artifact, reconcile it against the Sheet, and replace the empty user-owned cloud snapshot once with a revision guard.
+
+### Decision
+
+We will use option 3. The Sheet is read-only during cutover. The operation preserves the profile already configured in Personal mode, replaces generic meal, food, exercise, and progression placeholders with the existing private Sheet-derived presets, and imports every historical check-in and completed exercise result.
+
+Historical numeric rep ranges use their lower bound. Exercise identities are preserved rather than mapped to different movements. The current cloud state and the validated import artifact are retained under the Git-ignored `.private/` boundary. The cloud write must match the inspected revision and empty-history precondition, then increment the snapshot revision once.
+
+### Rationale
+
+This keeps a temporary data-transition problem out of the permanent product while preserving auditability, rollback, and the atomic workout-to-progression model. A compare-and-swap boundary prevents the operator from overwriting a concurrent phone change, and exact source-to-destination reconciliation makes completeness testable without publishing Personal data.
+
+### Consequences
+
+- No Personal values, migration artifacts, or credentials enter Git.
+- The public proof of work records the migration method and safety controls, not the private dataset.
+- The Sheet remains the fallback until the signed-in phone pulls and displays the migrated snapshot.
+- After phone verification, new fitness activity belongs in the app; the Sheet is retained only as historical backup.
+
+### Revisit when
+
+A later source contains additional history, a second user needs onboarding, or recurring imports become a genuine product requirement.
