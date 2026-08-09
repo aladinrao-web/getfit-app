@@ -92,7 +92,7 @@ Evidence or condition that should reopen the decision.
 | [D-022](#d-022--migrate-sheet-history-once-at-cloud-cutover) | 2026-08-08 | Accepted | Load Sheet history once into the private cloud store | Avoid productizing a temporary migration path |
 | [D-023](#d-023--use-supabase-and-a-revisioned-personal-snapshot) | 2026-08-08 | Accepted | Use Supabase Auth, RLS, and one revisioned state snapshot per user | Preserve atomic app behavior with low operating complexity |
 | [D-024](#d-024--resolve-cloud-conflicts-by-explicit-whole-copy-selection) | 2026-08-09 | Accepted | Compare both snapshots and require an explicit cloud-or-device choice | Preserve deliberate fitness state without unsafe automatic merges |
-| [D-025](#d-025--target-github-pages-behind-an-explicit-public-repository-gate) | 2026-08-09 | Proposed | Target GitHub Pages after explicit public visibility approval | Align hosting with proof of work without silently publishing the repository |
+| [D-025](#d-025--target-github-pages-behind-an-explicit-public-repository-gate) | 2026-08-09 | Accepted | Publish the audited repository and deploy through GitHub Pages | Align hosting with proof of work while keeping Personal data behind authentication and RLS |
 
 ## Timeline
 
@@ -1007,7 +1007,7 @@ Conflict frequency becomes material, multiple people edit the same workspace, or
 ## D-025 — Target GitHub Pages behind an explicit public repository gate
 
 - Date: 2026-08-09
-- Status: Proposed
+- Status: Accepted
 - Owners: Product, Engineering
 - Related: D-007, D-010, D-016, D-023, FR-PORT-02 through FR-PORT-04, OQ-07
 
@@ -1023,9 +1023,9 @@ getFit needs one stable HTTPS PWA URL for daily phone use and a public synthetic
 
 ### Decision
 
-GitHub Pages is the proposed target once the owner explicitly approves public repository visibility. The deployment workflow remains inactive while the repository is private. Codex must not change visibility automatically.
+GitHub Pages is the production target. On 2026-08-09, the owner explicitly approved public repository visibility after the full Git history passed the privacy and secret audit and Supabase public signup was disabled. The audited repository will be made public, PR #5 will be merged, and its deployment workflow will publish the PWA.
 
-The production build opens in synthetic Demo mode. Personal mode exposes sign-in only for the existing account. Supabase signup must be disabled separately before release, and the deployment must use only the publishable browser key. The PWA must support the `/getfit-app/` project path and restrict its service-worker cache to same-origin application assets.
+The production build opens in synthetic Demo mode. Personal mode exposes sign-in only for the existing account. Supabase public signup is disabled, and the deployment uses only the publishable browser key. The PWA supports the `/getfit-app/` project path and restricts its service-worker cache to same-origin application assets.
 
 ### Rationale
 
@@ -1036,7 +1036,7 @@ GitHub Pages makes the running product, source, CI, product documentation, and d
 - The full Git history must pass a privacy and secret audit before visibility changes.
 - A private repository requires either a paid GitHub plan or a different host.
 - The public site can expose Demo mode safely, while Personal records remain behind Supabase authentication and RLS.
-- Publishing remains blocked until repository visibility and Supabase signup are explicitly closed.
+- Public signup remains disabled; the deployment uses only the publishable browser key and relies on authenticated, owner-scoped RLS for Personal records.
 
 ### Revisit when
 

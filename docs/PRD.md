@@ -4,7 +4,7 @@
 | --- | --- |
 | Product | getFit |
 | Document status | Working baseline |
-| Version | 0.9 |
+| Version | 1.0 |
 | Product owner and primary user | Kovid |
 | Last updated | 2026-08-09 |
 | Repository baseline | `c0a5fc0` — `Merge PR #4: Add explicit cloud conflict recovery` |
@@ -737,7 +737,7 @@ Status: complete at `ac4cc75`.
 | OQ-04 | Should the A/B/C plan be configurable in Milestone 1 or after dogfood? | First real plan change | Open |
 | OQ-05 | What minimum observations should unlock weight recommendations? | Four-week data review | Open; current hypothesis is 4 + 4 observations |
 | OQ-06 | Should Personal and Demo mode share settings such as theme only? | Mode architecture design | Resolved for Personal v1: share no fitness data or settings; reconsider UI-only preferences later |
-| OQ-07 | What hosting target best supports private phone validation and a public PWA demo? | Milestone 2 and 4 planning | Proposed: GitHub Pages once public repository visibility is explicitly approved; the current plan does not support Pages while the repository is private |
+| OQ-07 | What hosting target best supports private phone validation and a public PWA demo? | Milestone 2 and 4 planning | Resolved: publish the audited repository and deploy the PWA through GitHub Pages |
 | OQ-08 | Which product-usage metrics can be computed locally without telemetry? | Dogfood instrumentation planning | Open |
 | OQ-09 | Which cloud/authentication service best meets offline, privacy, recovery, and maintenance needs? | Milestone 2 architecture comparison | Resolved: Supabase Auth + Postgres, local-first client, RLS, and revisioned snapshots |
 
@@ -758,6 +758,7 @@ A requirement or story is done when:
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.0 | 2026-08-09 | Approved public repository visibility and GitHub Pages as the production PWA host after the privacy, secret, and signup gates passed. |
 | 0.9 | 2026-08-09 | Added the production sign-in-only boundary, repository-subpath PWA requirements, and the proposed GitHub Pages target with its visibility gate. |
 | 0.8 | 2026-08-09 | Specified explicit whole-copy conflict recovery, displaced-copy backup, and compare-and-swap revalidation. |
 | 0.7 | 2026-08-08 | Selected Supabase, specified the revisioned snapshot and RLS boundary, added cloud access-control requirements, and resolved OQ-09. |
