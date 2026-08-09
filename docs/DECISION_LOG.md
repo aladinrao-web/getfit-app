@@ -91,6 +91,7 @@ Evidence or condition that should reopen the decision.
 | [D-021](#d-021--make-the-daily-check-in-progressively-saved-and-explicitly-completed) | 2026-08-08 | Accepted | Save one daily check-in progressively and complete it explicitly | Fit tracking around the day without corrupting nutrition meaning |
 | [D-022](#d-022--migrate-sheet-history-once-at-cloud-cutover) | 2026-08-08 | Accepted | Load Sheet history once into the private cloud store | Avoid productizing a temporary migration path |
 | [D-023](#d-023--use-supabase-and-a-revisioned-personal-snapshot) | 2026-08-08 | Accepted | Use Supabase Auth, RLS, and one revisioned state snapshot per user | Preserve atomic app behavior with low operating complexity |
+| [D-024](#d-024--resolve-cloud-conflicts-by-explicit-whole-copy-selection) | 2026-08-09 | Accepted | Compare both snapshots and require an explicit cloud-or-device choice | Preserve deliberate fitness state without unsafe automatic merges |
 
 ## Timeline
 
@@ -135,6 +136,13 @@ Evidence or condition that should reopen the decision.
 - Demo remains credential-free and synthetic; only Personal mode can synchronize.
 - Local state remains the immediate offline cache, while one RLS-protected snapshot per user is the cloud recovery and cross-device record.
 - Compare-and-swap revisions surface concurrent edits instead of allowing silent last-write-wins data loss.
+
+### 2026-08-09 — Conflict recovery
+
+- Conflicting device and cloud snapshots are compared by timestamp, record counts, progression targets, and workout-draft presence.
+- The user must select the complete cloud copy or complete device copy; the app does not merge fields or records automatically.
+- The displaced copy becomes the latest browser safety backup before replacement.
+- Keeping the device copy writes against the reviewed cloud revision, so another concurrent cloud change reopens comparison instead of being overwritten.
 
 ## D-001 — Use the existing tracker and strength plan as product references
 
@@ -947,3 +955,41 @@ This preserves the app’s proven atomic workflow, minimizes permanent backend s
 ### Revisit when
 
 The snapshot grows enough to affect latency, multiple users collaborate, conflict frequency becomes material, or product analytics require queryable record-level history.
+
+## D-024 — Resolve cloud conflicts by explicit whole-copy selection
+
+- Date: 2026-08-09
+- Status: Accepted
+- Owners: Product, Engineering
+- Related: D-017, D-023, FR-SYNC-04, FR-SYNC-05
+
+### Context
+
+A revision conflict means the device and cloud both changed after their last common snapshot. Workouts, progression decisions, check-ins, and profile settings are related parts of one fitness state, so automatically combining fields or records can produce a state the user never intended.
+
+### Options considered
+
+1. Apply the last arriving write automatically.
+2. Merge records or fields automatically.
+3. Compare both whole snapshots and require the user to choose which complete copy becomes current.
+
+### Decision
+
+The conflict interface will show the device and cloud timestamps, check-in and workout counts, progression-target counts, and whether each copy contains a workout draft. It will offer two explicit actions: use the latest cloud version on this device, or keep this device version and replace the reviewed cloud revision.
+
+The action requires confirmation. Before replacement, the displaced snapshot is stored as the existing versioned browser safety backup. Keeping the device copy uses compare-and-swap against the displayed cloud revision; if the cloud changes again first, the app refreshes the comparison and asks again.
+
+### Rationale
+
+Whole-copy selection preserves the atomic relationship between workout completion and progression while making the user, not timing, authoritative. Reusing the existing safety-backup format keeps recovery inspectable without adding record-level merge rules or a second persistence system.
+
+### Consequences
+
+- Conflict recovery requires an online connection because the cloud copy is refreshed or replaced during resolution.
+- The app never claims that two divergent snapshots were safely merged.
+- The Latest safety copy always contains the version displaced by the most recent resolved conflict.
+- Frequent conflicts would indicate that the snapshot model or device-use guidance should be revisited.
+
+### Revisit when
+
+Conflict frequency becomes material, multiple people edit the same workspace, or record-level synchronization can preserve workout and progression invariants with equal clarity.

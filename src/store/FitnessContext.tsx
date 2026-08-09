@@ -71,7 +71,6 @@ export function FitnessProvider({ children }: { children: ReactNode }) {
   const applyRemotePersonalState = useCallback((remoteState: FitnessState) => {
     setWorkspace((current) => {
       if (current.mode !== 'personal') return current
-      archivePersonalState(current.mode, current.state)
       return { ...current, state: remoteState }
     })
   }, [])

@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { decideSync, loadCloudSyncMetadata, saveCloudSyncMetadata, type CloudSyncMetadata } from './sync'
+import { createPersonalState } from '../data/seed'
+import {
+  decideSync,
+  loadCloudSyncMetadata,
+  planConflictResolution,
+  saveCloudSyncMetadata,
+  summarizeFitnessState,
+  type CloudSyncMetadata,
+} from './sync'
 
 class MemoryStorage implements Pick<Storage, 'getItem' | 'setItem'> {
   private values = new Map<string, string>()
@@ -41,5 +49,57 @@ describe('cloud reconciliation', () => {
     saveCloudSyncMetadata(storage, { ...metadata, userId: 'user-2' })
     expect(loadCloudSyncMetadata(storage, 'user-1')).toEqual(metadata)
     expect(loadCloudSyncMetadata(storage, 'user-2')?.userId).toBe('user-2')
+  })
+
+  it('summarizes the records needed to compare device and cloud copies', () => {
+    const state = createPersonalState()
+    state.checkIns.push({
+      id: 'check-in-1',
+      date: '2026-08-09',
+      adherence: {},
+      extrasProteinG: 0,
+      extrasCalories: 0,
+      notes: '',
+      updatedAt: '2026-08-09T08:00:00.000Z',
+    })
+
+    expect(summarizeFitnessState(state)).toEqual({
+      checkIns: 1,
+      workouts: 0,
+      progressionTargets: state.progressions.length,
+      hasWorkoutDraft: false,
+    })
+  })
+
+  it('archives the device copy before applying the cloud copy', () => {
+    const deviceState = createPersonalState()
+    const cloudState = { ...createPersonalState(), checkIns: [{
+      id: 'cloud-check-in',
+      date: '2026-08-09',
+      adherence: {},
+      extrasProteinG: 0,
+      extrasCalories: 0,
+      notes: '',
+      updatedAt: '2026-08-09T09:00:00.000Z',
+    }] }
+
+    expect(planConflictResolution('use-cloud', deviceState, cloudState, 7)).toEqual({
+      stateToArchive: deviceState,
+      stateToApplyOnDevice: cloudState,
+      stateToWriteToCloud: null,
+      expectedCloudRevision: null,
+    })
+  })
+
+  it('archives the cloud copy and uses its latest revision before keeping the device copy', () => {
+    const deviceState = createPersonalState()
+    const cloudState = createPersonalState()
+
+    expect(planConflictResolution('keep-device', deviceState, cloudState, 7)).toEqual({
+      stateToArchive: cloudState,
+      stateToApplyOnDevice: null,
+      stateToWriteToCloud: deviceState,
+      expectedCloudRevision: 7,
+    })
   })
 })

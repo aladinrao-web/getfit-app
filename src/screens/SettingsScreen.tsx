@@ -7,6 +7,7 @@ import type { AppMode, Profile } from '../domain/types'
 import { useFitness } from '../store/FitnessContext'
 import { loadPreChangeBackup } from '../store/persistence'
 import { Button, Card, Field, PageHeader, SectionHeading } from '../components/ui'
+import { CloudConflictPanel } from '../components/CloudConflictPanel'
 
 const suggestedTimezones = ['Asia/Calcutta', 'UTC', 'Europe/London', 'America/New_York', 'America/Los_Angeles']
 type NumericProfileKey = Exclude<keyof Profile, 'name' | 'timezone' | 'allergen'>
@@ -166,6 +167,15 @@ export function SettingsScreen() {
     }
   }
 
+  async function handleConflictResolution(choice: 'use-cloud' | 'keep-device') {
+    const confirmed = choice === 'use-cloud'
+      ? window.confirm('Replace this device workspace with the latest cloud version? The current device copy will be retained as your latest browser safety copy.')
+      : window.confirm('Replace the cloud workspace with this device version? The current cloud copy will be retained as your latest browser safety copy.')
+    if (!confirmed) return
+    await cloud.resolveConflict(choice)
+    setHasSafetyBackup(Boolean(loadPreChangeBackup(window.localStorage)))
+  }
+
   return (
     <div className="page settings-page">
       <PageHeader
@@ -190,7 +200,8 @@ export function SettingsScreen() {
           <p aria-live="polite">{cloud.message}</p>
           {cloud.lastSyncedAt && <small>Last cloud revision received {new Date(cloud.lastSyncedAt).toLocaleString()}</small>}
         </div>
-        {!cloud.configured ? <p className="cloud-config-note">Add the Supabase project URL and publishable key to this deployment.</p> : cloudConnected ? <div className="cloud-sync-actions"><Button variant="secondary" disabled={cloud.syncStatus === 'syncing'} onClick={() => void cloud.syncNow()}><RefreshCw size={18} />Sync now</Button><Button variant="ghost" disabled={cloud.authBusy} onClick={() => void cloud.signOut()}><LogOut size={18} />Sign out</Button></div> : <form className="cloud-auth-form" onSubmit={(event) => void handleSignIn(event)}><Field label="Email"><input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></Field><Field label="Password"><input type="password" autoComplete="current-password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} /></Field><div><Button type="submit" disabled={cloud.authBusy || cloud.authStatus === 'loading'}><LogIn size={18} />Sign in</Button><Button type="button" variant="secondary" disabled={cloud.authBusy || cloud.authStatus === 'loading'} onClick={() => void handleSignUp()}><UserPlus size={18} />Create account</Button><Button type="button" variant="ghost" disabled={cloud.authBusy || !email.trim()} onClick={() => void cloud.resendConfirmation(email)}>Resend confirmation</Button></div></form>}
+        {!cloud.configured ? <p className="cloud-config-note">Add the Supabase project URL and publishable key to this deployment.</p> : cloudConnected ? <div className="cloud-sync-actions"><Button variant="secondary" disabled={cloud.syncStatus === 'syncing' || Boolean(cloud.conflict)} onClick={() => void cloud.syncNow()}><RefreshCw size={18} />Sync now</Button><Button variant="ghost" disabled={cloud.authBusy || cloud.resolutionBusy} onClick={() => void cloud.signOut()}><LogOut size={18} />Sign out</Button></div> : <form className="cloud-auth-form" onSubmit={(event) => void handleSignIn(event)}><Field label="Email"><input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></Field><Field label="Password"><input type="password" autoComplete="current-password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} /></Field><div><Button type="submit" disabled={cloud.authBusy || cloud.authStatus === 'loading'}><LogIn size={18} />Sign in</Button><Button type="button" variant="secondary" disabled={cloud.authBusy || cloud.authStatus === 'loading'} onClick={() => void handleSignUp()}><UserPlus size={18} />Create account</Button><Button type="button" variant="ghost" disabled={cloud.authBusy || !email.trim()} onClick={() => void cloud.resendConfirmation(email)}>Resend confirmation</Button></div></form>}
+        {cloud.conflict && <CloudConflictPanel conflict={cloud.conflict} deviceSummary={{ checkIns: state.checkIns.length, workouts: state.workouts.length, progressionTargets: state.progressions.length, hasWorkoutDraft: Boolean(state.draftWorkout) }} resolutionBusy={cloud.resolutionBusy} onResolve={(choice) => void handleConflictResolution(choice)} />}
       </Card>}
 
       {mode === 'personal' && <Card className="preset-import-card"><div><p className="eyebrow">Private configuration</p><h2>Personal presets</h2><p>Apply profile, meals, foods, exercises, and progression targets from a local JSON file. Check-ins and workout history are never included.</p>{presetStatus && <span className="preset-status">{presetStatus}</span>}</div><label className={`button button-secondary preset-file-button${canImportPresets ? '' : ' disabled'}`}><FileUp size={18} />Import preset file<input type="file" accept="application/json,.json" disabled={!canImportPresets} onChange={(event) => { void handlePresetFile(event.target.files?.[0]); event.target.value = '' }} /></label></Card>}

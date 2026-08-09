@@ -10,6 +10,21 @@ export interface CloudSyncMetadata {
 }
 
 export type SyncDecision = 'create-cloud' | 'push-local' | 'pull-cloud' | 'synced' | 'conflict'
+export type ConflictResolutionChoice = 'use-cloud' | 'keep-device'
+
+export interface FitnessStateSummary {
+  checkIns: number
+  workouts: number
+  progressionTargets: number
+  hasWorkoutDraft: boolean
+}
+
+export interface ConflictResolutionPlan {
+  stateToArchive: FitnessState
+  stateToApplyOnDevice: FitnessState | null
+  stateToWriteToCloud: FitnessState | null
+  expectedCloudRevision: number | null
+}
 
 type StorageAdapter = Pick<Storage, 'getItem' | 'setItem'>
 
@@ -29,6 +44,38 @@ export function decideSync(
   const localChanged = localHash !== metadata.lastSyncedHash
   if (remoteRevision > metadata.baseRevision) return localChanged ? 'conflict' : 'pull-cloud'
   return localChanged ? 'push-local' : 'synced'
+}
+
+export function summarizeFitnessState(state: FitnessState): FitnessStateSummary {
+  return {
+    checkIns: state.checkIns.length,
+    workouts: state.workouts.length,
+    progressionTargets: state.progressions.length,
+    hasWorkoutDraft: Boolean(state.draftWorkout),
+  }
+}
+
+export function planConflictResolution(
+  choice: ConflictResolutionChoice,
+  deviceState: FitnessState,
+  cloudState: FitnessState,
+  cloudRevision: number,
+): ConflictResolutionPlan {
+  if (choice === 'use-cloud') {
+    return {
+      stateToArchive: deviceState,
+      stateToApplyOnDevice: cloudState,
+      stateToWriteToCloud: null,
+      expectedCloudRevision: null,
+    }
+  }
+
+  return {
+    stateToArchive: cloudState,
+    stateToApplyOnDevice: null,
+    stateToWriteToCloud: deviceState,
+    expectedCloudRevision: cloudRevision,
+  }
 }
 
 function readMetadataMap(storage: StorageAdapter): Record<string, CloudSyncMetadata> {
