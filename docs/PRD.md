@@ -452,6 +452,7 @@ It's done when:
 | FR-SYNC-03 | P0 | The interface shall show whether data is saved locally, syncing, synced, or failed. | UI + E2E |
 | FR-SYNC-04 | P0 | Retried or repeated synchronization shall preserve stable IDs and prevent duplicate sessions/check-ins. | Integration + failure test |
 | FR-SYNC-05 | P0 | Conflict handling shall preserve the latest deliberate user action and surface unresolved conflicts. | Integration + E2E |
+| FR-SYNC-06 | P0 | Personal cloud records shall be inaccessible to anonymous clients and to other authenticated users. | Database policy test + security audit |
 | FR-EXP-01 | P0 | Export shall produce a versioned Personal backup plus Sheet-ready weight, workout-log, and progression files. | Integration |
 | FR-EXP-02 | P0 | Exported files shall include an export timestamp, schema version, record counts, and source mode. | Unit + integration |
 | FR-EXP-03 | P0 | Restore shall replace Personal state only after validation, automatic pre-import backup, summary, and confirmation. | Integration + E2E |
@@ -664,8 +665,8 @@ The public GitHub release is ready only when:
 
 ## 16. Dependencies and constraints
 
-- Current implementation: React, TypeScript, Vite, local browser persistence, synthetic fixture data.
-- Current baseline is a client-only PWA; authenticated cloud persistence is required before Personal cutover.
+- Current implementation: React, TypeScript, Vite, local browser persistence, synthetic fixture data, and Supabase Auth/Postgres cloud persistence.
+- Personal cloud persistence uses one revisioned state snapshot per authenticated user with Postgres row-level security; Demo remains credential-free and synthetic.
 - Public hosting must support SPA/PWA paths and service-worker assets.
 - Personal mode must not depend on the reference Google Sheet at runtime.
 - Existing tracker and strength plan remain product references and the controlled migration source, not public repository data.
@@ -735,7 +736,7 @@ Status: complete at `ac4cc75`.
 | OQ-06 | Should Personal and Demo mode share settings such as theme only? | Mode architecture design | Resolved for Personal v1: share no fitness data or settings; reconsider UI-only preferences later |
 | OQ-07 | What hosting target best supports private phone validation and a public PWA demo? | Milestone 2 and 4 planning | Open |
 | OQ-08 | Which product-usage metrics can be computed locally without telemetry? | Dogfood instrumentation planning | Open |
-| OQ-09 | Which cloud/authentication service best meets offline, privacy, recovery, and maintenance needs? | Milestone 2 architecture comparison | Open |
+| OQ-09 | Which cloud/authentication service best meets offline, privacy, recovery, and maintenance needs? | Milestone 2 architecture comparison | Resolved: Supabase Auth + Postgres, local-first client, RLS, and revisioned snapshots |
 
 ## 19. Definition of done for future work
 
@@ -754,6 +755,7 @@ A requirement or story is done when:
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 0.7 | 2026-08-08 | Selected Supabase, specified the revisioned snapshot and RLS boundary, added cloud access-control requirements, and resolved OQ-09. |
 | 0.6 | 2026-08-08 | Implemented versioned Personal backup and replace-only restore, pre-change safety copies, workout correction/deletion, and deterministic progression repair. |
 | 0.5 | 2026-08-08 | Made Sheet history migration a one-time private cutover operation and defined lower-bound normalization for historical rep ranges. |
 | 0.4 | 2026-08-08 | Defined staged daily check-ins: autosaved partial state, unanswered-versus-skipped semantics, immediate weight use, and explicit completion. |

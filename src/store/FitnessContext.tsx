@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { usePersonalCloud, type PersonalCloudValue } from '../cloud/usePersonalCloud'
 import { DEMO_TODAY } from '../data/seed'
 import { createPersonalBackup, serializePersonalBackup, type PersonalBackup } from '../domain/backup'
 import { formatDateInTimeZone } from '../domain/date'
@@ -12,6 +13,7 @@ interface FitnessContextValue {
   mode: AppMode
   state: FitnessState
   today: string
+  cloud: PersonalCloudValue
   switchMode: (mode: AppMode) => void
   saveCheckIn: (checkIn: DailyCheckIn) => void
   completeCheckIn: (checkIn: DailyCheckIn) => void
@@ -66,6 +68,16 @@ export function FitnessProvider({ children }: { children: ReactNode }) {
   const { mode, state } = workspace
   const today = mode === 'demo' ? DEMO_TODAY : formatDateInTimeZone(now, state.profile.timezone)
 
+  const applyRemotePersonalState = useCallback((remoteState: FitnessState) => {
+    setWorkspace((current) => {
+      if (current.mode !== 'personal') return current
+      archivePersonalState(current.mode, current.state)
+      return { ...current, state: remoteState }
+    })
+  }, [])
+
+  const cloud = usePersonalCloud({ mode, state, onRemoteState: applyRemotePersonalState })
+
   useEffect(() => {
     saveActiveMode(window.localStorage, mode)
     saveModeState(window.localStorage, mode, state)
@@ -81,6 +93,7 @@ export function FitnessProvider({ children }: { children: ReactNode }) {
     mode,
     state,
     today,
+    cloud,
     switchMode(nextMode) {
       setWorkspace((current) => current.mode === nextMode ? current : {
         mode: nextMode,
@@ -182,7 +195,7 @@ export function FitnessProvider({ children }: { children: ReactNode }) {
         return { ...current, state: resetModeState(window.localStorage, current.mode) }
       })
     },
-  }), [mode, state, today])
+  }), [cloud, mode, state, today])
 
   return <FitnessContext.Provider value={value}>{children}</FitnessContext.Provider>
 }
