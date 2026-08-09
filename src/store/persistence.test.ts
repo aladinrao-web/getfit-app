@@ -7,6 +7,7 @@ import {
   SCHEMA_VERSION,
   loadActiveMode,
   loadModeState,
+  loadModeStateUpdatedAt,
   saveActiveMode,
   saveModeState,
 } from './persistence'
@@ -41,6 +42,15 @@ describe('mode persistence', () => {
     saveActiveMode(storage, 'personal')
     expect(storage.getItem(ACTIVE_MODE_KEY)).toBe('personal')
     expect(loadActiveMode(storage)).toBe('personal')
+  })
+
+  it('exposes the persisted device timestamp for conflict comparison', () => {
+    const storage = new MemoryStorage()
+    const personal = loadModeState(storage, 'personal')
+    saveModeState(storage, 'personal', personal, new Date('2026-08-08T10:01:00.000Z'))
+
+    expect(loadModeStateUpdatedAt(storage, 'personal')).toBe('2026-08-08T10:01:00.000Z')
+    expect(loadModeStateUpdatedAt(storage, 'demo')).toBeNull()
   })
 
   it('migrates the legacy demo blob and assigns stable check-in IDs', () => {

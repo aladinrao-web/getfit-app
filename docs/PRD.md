@@ -4,10 +4,10 @@
 | --- | --- |
 | Product | getFit |
 | Document status | Working baseline |
-| Version | 0.6 |
+| Version | 0.8 |
 | Product owner and primary user | Kovid |
-| Last updated | 2026-08-08 |
-| Repository baseline | `8dbade2` — `Merge Personal mode foundation` |
+| Last updated | 2026-08-09 |
+| Repository baseline | `7dfc96c` — `Merge PR #3: Add Supabase personal cloud sync` |
 | Companion record | [Decision log](DECISION_LOG.md) |
 
 ## 1. Purpose of this document
@@ -451,7 +451,7 @@ It's done when:
 | FR-SYNC-02 | P0 | Personal changes shall save to a local offline cache before background synchronization. | Integration + offline E2E |
 | FR-SYNC-03 | P0 | The interface shall show whether data is saved locally, syncing, synced, or failed. | UI + E2E |
 | FR-SYNC-04 | P0 | Retried or repeated synchronization shall preserve stable IDs and prevent duplicate sessions/check-ins. | Integration + failure test |
-| FR-SYNC-05 | P0 | Conflict handling shall preserve the latest deliberate user action and surface unresolved conflicts. | Integration + E2E |
+| FR-SYNC-05 | P0 | Conflict handling shall compare both whole snapshots, require an explicit cloud-or-device choice, retain the displaced copy as a versioned safety backup, and reject a device overwrite if the reviewed cloud revision changes again. | Unit + integration + E2E |
 | FR-SYNC-06 | P0 | Personal cloud records shall be inaccessible to anonymous clients and to other authenticated users. | Database policy test + security audit |
 | FR-EXP-01 | P0 | Export shall produce a versioned Personal backup plus Sheet-ready weight, workout-log, and progression files. | Integration |
 | FR-EXP-02 | P0 | Exported files shall include an export timestamp, schema version, record counts, and source mode. | Unit + integration |
@@ -755,6 +755,7 @@ A requirement or story is done when:
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 0.8 | 2026-08-09 | Specified explicit whole-copy conflict recovery, displaced-copy backup, and compare-and-swap revalidation. |
 | 0.7 | 2026-08-08 | Selected Supabase, specified the revisioned snapshot and RLS boundary, added cloud access-control requirements, and resolved OQ-09. |
 | 0.6 | 2026-08-08 | Implemented versioned Personal backup and replace-only restore, pre-change safety copies, workout correction/deletion, and deterministic progression repair. |
 | 0.5 | 2026-08-08 | Made Sheet history migration a one-time private cutover operation and defined lower-bound normalization for historical rep ranges. |

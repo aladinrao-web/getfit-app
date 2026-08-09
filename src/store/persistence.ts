@@ -97,6 +97,10 @@ export function loadModeState(storage: StorageAdapter, mode: AppMode) {
   return initialState(mode)
 }
 
+export function loadModeStateUpdatedAt(storage: StorageAdapter, mode: AppMode) {
+  return readEnvelope(storage, mode)?.updatedAt ?? null
+}
+
 export function saveModeState(storage: StorageAdapter, mode: AppMode, state: FitnessState, now = new Date()) {
   const existing = readEnvelope(storage, mode)
   const timestamp = now.toISOString()
