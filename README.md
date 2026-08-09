@@ -32,13 +32,15 @@ Private Personal configuration can be imported from Settings as a versioned JSON
 
 The cloud schema uses one row per authenticated user, Postgres row-level security, and an atomic compare-and-swap function so a stale device cannot silently overwrite a newer revision. Local storage remains the immediate offline layer.
 
+Personal Settings exports one timestamped portable ZIP containing a restorable JSON backup, Sheet-ready weight, workout, and progression CSV files, plus a manifest with schema versions and reconciled record counts. The app never writes to Google Sheets automatically.
+
 The reference Google Sheet remains the operational source of truth until cross-device/offline validation and the one-time history migration reconcile successfully. No personal records or Sheet synchronization are included in this repository.
 
-## Deployment readiness
+## Production deployment
 
-The proposed production target is GitHub Pages at `https://aladinrao-web.github.io/getfit-app/`. The workflow is intentionally inactive while this repository is private: the current GitHub plan does not support Pages for private repositories, and repository visibility requires an explicit privacy decision.
+The production PWA is published through GitHub Pages at [https://aladinrao-web.github.io/getfit-app/](https://aladinrao-web.github.io/getfit-app/).
 
-Production deployment is designed to:
+Production deployment:
 
 - open in credential-free synthetic Demo mode;
 - allow Personal sign-in only for the existing Supabase account;
@@ -46,4 +48,4 @@ Production deployment is designed to:
 - keep Supabase API traffic outside the service-worker cache;
 - run tests plus deployment-asset verification before publishing.
 
-Before release, disable new-user signup in Supabase Auth, verify the two encrypted `VITE_SUPABASE_*` repository secrets, complete the Git-history privacy audit, approve public repository visibility or select a private hosting alternative, and run the production phone/offline smoke test.
+Public Supabase signup is disabled, the repository contains no Personal records or secrets, and production phone sign-in, offline restart, automatic reconnect, cross-device convergence, and sign-in recovery have been verified. The remaining cutover gate is the private one-time Sheet-history migration and reconciliation pass.

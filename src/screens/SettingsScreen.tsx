@@ -12,13 +12,17 @@ import { CloudConflictPanel } from '../components/CloudConflictPanel'
 const suggestedTimezones = ['Asia/Calcutta', 'UTC', 'Europe/London', 'America/New_York', 'America/Los_Angeles']
 type NumericProfileKey = Exclude<keyof Profile, 'name' | 'timezone' | 'allergen'>
 
-function downloadJson(contents: string, filename: string) {
-  const url = URL.createObjectURL(new Blob([contents], { type: 'application/json' }))
+function downloadFile(contents: BlobPart, filename: string, mediaType: string) {
+  const url = URL.createObjectURL(new Blob([contents], { type: mediaType }))
   const anchor = document.createElement('a')
   anchor.href = url
   anchor.download = filename
   anchor.click()
-  URL.revokeObjectURL(url)
+  window.setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
+function downloadJson(contents: string, filename: string) {
+  downloadFile(contents, filename, 'application/json')
 }
 
 function backupFilename(prefix: string, exportedAt: string) {
@@ -55,6 +59,7 @@ export function SettingsScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [saved, setSaved] = useState(false)
+  const [exportBusy, setExportBusy] = useState(false)
   const [presetStatus, setPresetStatus] = useState('')
   const [restoreStatus, setRestoreStatus] = useState('')
   const [pendingBackup, setPendingBackup] = useState<PersonalBackup | null>(null)
@@ -121,10 +126,18 @@ export function SettingsScreen() {
     }
   }
 
-  function handleExport() {
-    const backup = createPersonalBackup(state)
-    downloadJson(serializePersonalBackup(backup), backupFilename('personal-backup', backup.exportedAt))
-    setRestoreStatus('Personal backup downloaded.')
+  async function handleExport() {
+    setExportBusy(true)
+    try {
+      const { createPortableSnapshot, serializePortableSnapshot } = await import('../domain/portableExport')
+      const snapshot = createPortableSnapshot(state)
+      downloadFile(await serializePortableSnapshot(snapshot), snapshot.archiveFilename, 'application/zip')
+      setRestoreStatus('Portable snapshot downloaded with a restorable backup, Sheet-ready CSV files, and a reconciliation manifest.')
+    } catch {
+      setRestoreStatus('The portable snapshot could not be created. Your Personal workspace was not changed.')
+    } finally {
+      setExportBusy(false)
+    }
   }
 
   async function handleRestoreFile(file: File | undefined) {
@@ -198,9 +211,9 @@ export function SettingsScreen() {
       {mode === 'personal' && <Card className="preset-import-card"><div><p className="eyebrow">Private configuration</p><h2>Personal presets</h2><p>Apply profile, meals, foods, exercises, and progression targets from a local JSON file. Check-ins and workout history are never included.</p>{presetStatus && <span className="preset-status">{presetStatus}</span>}</div><label className={`button button-secondary preset-file-button${canImportPresets ? '' : ' disabled'}`}><FileUp size={18} />Import preset file<input type="file" accept="application/json,.json" disabled={!canImportPresets} onChange={(event) => { void handlePresetFile(event.target.files?.[0]); event.target.value = '' }} /></label></Card>}
 
       {mode === 'personal' && <Card className="data-safety-card">
-        <div><p className="eyebrow">Data safety</p><h2>Backup & recovery</h2><p>Export your full local workspace, or replace it from a verified getFit backup. Restore never merges records.</p>{restoreStatus && <span className="preset-status">{restoreStatus}</span>}</div>
+        <div><p className="eyebrow">Data safety</p><h2>Portable snapshot & recovery</h2><p>Download one ZIP with a restorable Personal backup, Sheet-ready weight, workout, and progression CSV files, plus a reconciliation manifest. Restore uses the extracted backup JSON and never merges records.</p>{restoreStatus && <span className="preset-status">{restoreStatus}</span>}</div>
         <div className="data-safety-actions">
-          <Button variant="secondary" onClick={handleExport}><FileDown size={18} />Export backup</Button>
+          <Button variant="secondary" disabled={exportBusy} onClick={() => void handleExport()}><FileDown size={18} />{exportBusy ? 'Preparing snapshot…' : 'Export portable snapshot'}</Button>
           <label className="button button-secondary preset-file-button"><ArchiveRestore size={18} />Restore backup<input type="file" accept="application/json,.json" onChange={(event) => { void handleRestoreFile(event.target.files?.[0]); event.target.value = '' }} /></label>
           {hasSafetyBackup && <Button variant="ghost" onClick={handleDownloadSafetyBackup}><FileDown size={18} />Latest safety copy</Button>}
         </div>
