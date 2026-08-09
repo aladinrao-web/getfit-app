@@ -21,7 +21,8 @@ const navItems = [
 
 export default function App() {
   const [view, setView] = useState<AppView>('dashboard')
-  const { mode } = useFitness()
+  const { mode, cloud } = useFitness()
+  const personalCloudLabel = cloud.syncStatus === 'synced' ? 'Synced' : cloud.syncStatus === 'syncing' ? 'Syncing' : cloud.syncStatus === 'conflict' ? 'Needs review' : cloud.syncStatus === 'offline' ? 'Offline-safe' : 'Local only'
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -50,7 +51,7 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-foot">
-          <div className={`mode-chip ${mode}`}>{mode === 'demo' ? <><Apple size={16} />Synthetic demo data</> : <><UserRound size={16} />Personal test workspace</>}</div>
+          <div className={`mode-chip ${mode}`}>{mode === 'demo' ? <><Apple size={16} />Synthetic demo data</> : <><UserRound size={16} />Personal · {personalCloudLabel}</>}</div>
           <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}><Settings size={20} />Settings</button>
         </div>
       </aside>
@@ -58,7 +59,7 @@ export default function App() {
       <div className="app-content">
         <header className="mobile-header">
           <button className="brand compact" onClick={() => setView('dashboard')} aria-label="Go to Today"><span className="brand-mark"><Dumbbell size={19} /></span><span>getFit</span></button>
-          <button className="icon-button" onClick={() => setView('settings')} aria-label="Settings"><Settings size={21} /></button>
+          <button className="icon-button mobile-settings-button" onClick={() => setView('settings')} aria-label={mode === 'personal' ? `Settings. Personal cloud status: ${personalCloudLabel}` : 'Settings'}><Settings size={21} />{mode === 'personal' && <span className={`cloud-status-dot ${cloud.syncStatus}`} aria-hidden="true" />}</button>
         </header>
         <main>{content}</main>
       </div>

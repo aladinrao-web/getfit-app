@@ -100,6 +100,11 @@ function validateState(value: unknown): asserts value is FitnessState {
   }
 }
 
+export function parsePersonalState(value: unknown): FitnessState {
+  validateState(value)
+  return structuredClone(value)
+}
+
 export function createPersonalBackup(state: FitnessState, exportedAt = new Date().toISOString()): PersonalBackup {
   return {
     backupSchemaVersion: PERSONAL_BACKUP_SCHEMA_VERSION,

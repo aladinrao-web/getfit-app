@@ -90,6 +90,7 @@ Evidence or condition that should reopen the decision.
 | [D-020](#d-020--import-private-personal-presets-without-versioning-the-data) | 2026-08-08 | Accepted | Apply ignored local preset bundles to an empty Personal workspace | Personalize the app without exposing health data in Git |
 | [D-021](#d-021--make-the-daily-check-in-progressively-saved-and-explicitly-completed) | 2026-08-08 | Accepted | Save one daily check-in progressively and complete it explicitly | Fit tracking around the day without corrupting nutrition meaning |
 | [D-022](#d-022--migrate-sheet-history-once-at-cloud-cutover) | 2026-08-08 | Accepted | Load Sheet history once into the private cloud store | Avoid productizing a temporary migration path |
+| [D-023](#d-023--use-supabase-and-a-revisioned-personal-snapshot) | 2026-08-08 | Accepted | Use Supabase Auth, RLS, and one revisioned state snapshot per user | Preserve atomic app behavior with low operating complexity |
 
 ## Timeline
 
@@ -127,6 +128,13 @@ Evidence or condition that should reopen the decision.
 - Profile, meal, food, and exercise presets are read from the authoritative Sheet without importing logs.
 - The repository contains only the versioned importer and validation rules.
 - Actual Personal preset values remain in a Git-ignored local file and browser state.
+
+### 2026-08-08 — Personal cloud foundation
+
+- A dedicated Supabase project in Mumbai was selected for Personal authentication and persistence.
+- Demo remains credential-free and synthetic; only Personal mode can synchronize.
+- Local state remains the immediate offline cache, while one RLS-protected snapshot per user is the cloud recovery and cross-device record.
+- Compare-and-swap revisions surface concurrent edits instead of allowing silent last-write-wins data loss.
 
 ## D-001 — Use the existing tracker and strength plan as product references
 
@@ -900,3 +908,42 @@ This keeps temporary migration complexity out of the daily product while still m
 ### Revisit when
 
 Another user or recurring external source creates a genuine ongoing import need.
+
+## D-023 — Use Supabase and a revisioned Personal snapshot
+
+- Date: 2026-08-08
+- Status: Accepted
+- Owners: Product, Engineering
+- Related: D-005, D-016, D-022, FR-SYNC-01 through FR-SYNC-06, OQ-09
+
+### Context
+
+Phone-to-desktop continuity requires identity, durable storage, access control, and a conflict boundary. The current app already treats a completed workout and its progression updates as one atomic state transition, and the Personal dataset is small enough that record-level cloud tables would add mapping and partial-write paths before they add user value.
+
+### Options considered
+
+1. Keep Personal mode local-only with manual backups.
+2. Build a custom API and normalized cloud schema for each fitness entity.
+3. Use Supabase Auth and Postgres with one revisioned Personal snapshot per user, retaining local storage as the offline cache.
+
+### Decision
+
+We will use a dedicated Supabase project in Mumbai. Personal users authenticate with email and password. Postgres row-level security restricts every snapshot to its owner, and anonymous clients receive no table or write-function access.
+
+The cloud stores one versioned `FitnessState` snapshot per user. Writes call a security-invoker function with the client’s expected revision; a stale revision fails as a conflict. Demo mode never authenticates or synchronizes.
+
+### Rationale
+
+This preserves the app’s proven atomic workflow, minimizes permanent backend surface, and provides managed identity and recovery at zero initial infrastructure cost. Revision checks make multi-device risk explicit without pretending that automatic merging of workout and progression state is safe.
+
+### Consequences
+
+- Cross-device changes synchronize at whole-workspace granularity.
+- Concurrent edits are preserved on both sides and require explicit resolution; the app does not silently apply last-write-wins.
+- A larger or multi-user product may eventually need normalized domain tables and a real mutation queue.
+- Public deployment must close or otherwise control account creation after the Personal account is established.
+- Database migrations, generated types, security policies, and sync tests remain versioned as proof of work; Personal values do not.
+
+### Revisit when
+
+The snapshot grows enough to affect latency, multiple users collaborate, conflict frequency becomes material, or product analytics require queryable record-level history.

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { AlertTriangle, ArchiveRestore, CloudOff, Database, FileDown, FileUp, RotateCcw, Save, Settings2, ShieldCheck, UserRound, X } from 'lucide-react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { AlertTriangle, ArchiveRestore, Cloud, CloudOff, Database, FileDown, FileUp, LogIn, LogOut, RefreshCw, RotateCcw, Save, Settings2, ShieldCheck, UserPlus, UserRound, X } from 'lucide-react'
 import { createPersonalBackup, parsePersonalBackup, serializePersonalBackup, type PersonalBackup } from '../domain/backup'
 import { parsePersonalPresetBundle } from '../domain/presets'
 import { normalizeNumericDraft } from '../domain/numeric'
@@ -49,14 +49,26 @@ function NumberInput({ value, onValueChange, step, min, max }: { value: number; 
 }
 
 export function SettingsScreen() {
-  const { mode, state, switchMode, updateProfile, applyPersonalPresets, restorePersonalBackup, resetCurrentMode } = useFitness()
+  const { mode, state, cloud, switchMode, updateProfile, applyPersonalPresets, restorePersonalBackup, resetCurrentMode } = useFitness()
   const [form, setForm] = useState<Profile>(state.profile)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [saved, setSaved] = useState(false)
   const [presetStatus, setPresetStatus] = useState('')
   const [restoreStatus, setRestoreStatus] = useState('')
   const [pendingBackup, setPendingBackup] = useState<PersonalBackup | null>(null)
   const [hasSafetyBackup, setHasSafetyBackup] = useState(() => Boolean(loadPreChangeBackup(window.localStorage)))
   const canImportPresets = mode === 'personal' && !state.checkIns.length && !state.workouts.length && !state.draftWorkout
+  const cloudConnected = cloud.authStatus === 'signed-in'
+  const cloudStatusLabel = {
+    unconfigured: 'Not configured',
+    'local-only': 'Local only',
+    syncing: 'Syncing',
+    synced: 'Synced',
+    offline: 'Offline-safe',
+    conflict: 'Needs review',
+    error: 'Action needed',
+  }[cloud.syncStatus]
 
   useEffect(() => {
     setForm(state.profile)
@@ -82,6 +94,22 @@ export function SettingsScreen() {
   function handleModeChange(nextMode: AppMode) {
     if (nextMode === mode) return
     switchMode(nextMode)
+  }
+
+  async function handleSignIn(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!email.trim() || !password) return
+    await cloud.signIn(email, password)
+    setPassword('')
+  }
+
+  async function handleSignUp() {
+    if (!email.trim() || password.length < 8) {
+      window.alert('Enter your email and a password with at least 8 characters.')
+      return
+    }
+    await cloud.signUp(email, password)
+    setPassword('')
   }
 
   function handleReset() {
@@ -154,7 +182,16 @@ export function SettingsScreen() {
         </div>
       </Card>
 
-      {mode === 'personal' && <div className="personal-readiness-note"><CloudOff size={20} /><div><strong>Protected for local testing, not yet ready for your real history.</strong><span>Backups now reduce local risk, but your Sheet remains authoritative until cloud sync and migration checks pass.</span></div></div>}
+      {mode === 'personal' && <div className={`personal-readiness-note${cloud.syncStatus === 'synced' ? ' connected' : ''}`}>{cloud.syncStatus === 'synced' ? <Cloud size={20} /> : <CloudOff size={20} />}<div><strong>{cloud.syncStatus === 'synced' ? 'Cloud persistence is connected.' : 'Local-first Personal workspace.'}</strong><span>{cloud.syncStatus === 'synced' ? 'Your app data can now follow you across devices. The Sheet remains authoritative until the one-time history import and cutover checks pass.' : 'This device keeps working locally. Sign in below to add cross-device sync before importing real history.'}</span></div></div>}
+
+      {mode === 'personal' && <Card className={`cloud-sync-card status-${cloud.syncStatus}`}>
+        <div className="cloud-sync-copy">
+          <div className="cloud-sync-heading"><span className="icon-tile green">{cloudConnected ? <Cloud size={21} /> : <CloudOff size={21} />}</span><div><p className="eyebrow">Personal cloud</p><h2>{cloudConnected ? cloud.userEmail : 'Connect this workspace'}</h2></div><span className={`cloud-status-badge ${cloud.syncStatus}`}>{cloudStatusLabel}</span></div>
+          <p aria-live="polite">{cloud.message}</p>
+          {cloud.lastSyncedAt && <small>Last cloud revision received {new Date(cloud.lastSyncedAt).toLocaleString()}</small>}
+        </div>
+        {!cloud.configured ? <p className="cloud-config-note">Add the Supabase project URL and publishable key to this deployment.</p> : cloudConnected ? <div className="cloud-sync-actions"><Button variant="secondary" disabled={cloud.syncStatus === 'syncing'} onClick={() => void cloud.syncNow()}><RefreshCw size={18} />Sync now</Button><Button variant="ghost" disabled={cloud.authBusy} onClick={() => void cloud.signOut()}><LogOut size={18} />Sign out</Button></div> : <form className="cloud-auth-form" onSubmit={(event) => void handleSignIn(event)}><Field label="Email"><input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></Field><Field label="Password"><input type="password" autoComplete="current-password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} /></Field><div><Button type="submit" disabled={cloud.authBusy || cloud.authStatus === 'loading'}><LogIn size={18} />Sign in</Button><Button type="button" variant="secondary" disabled={cloud.authBusy || cloud.authStatus === 'loading'} onClick={() => void handleSignUp()}><UserPlus size={18} />Create account</Button><Button type="button" variant="ghost" disabled={cloud.authBusy || !email.trim()} onClick={() => void cloud.resendConfirmation(email)}>Resend confirmation</Button></div></form>}
+      </Card>}
 
       {mode === 'personal' && <Card className="preset-import-card"><div><p className="eyebrow">Private configuration</p><h2>Personal presets</h2><p>Apply profile, meals, foods, exercises, and progression targets from a local JSON file. Check-ins and workout history are never included.</p>{presetStatus && <span className="preset-status">{presetStatus}</span>}</div><label className={`button button-secondary preset-file-button${canImportPresets ? '' : ' disabled'}`}><FileUp size={18} />Import preset file<input type="file" accept="application/json,.json" disabled={!canImportPresets} onChange={(event) => { void handlePresetFile(event.target.files?.[0]); event.target.value = '' }} /></label></Card>}
 
@@ -205,8 +242,8 @@ export function SettingsScreen() {
         <aside>
           <Card className="demo-data-card">
             <div className={`icon-tile ${mode === 'demo' ? 'blue' : 'green'}`}>{mode === 'demo' ? <Database size={22} /> : <UserRound size={22} />}</div>
-            <p className="eyebrow">Data source</p><h2>{mode === 'demo' ? 'Synthetic fixtures' : 'Local test data'}</h2>
-            <p>{mode === 'demo' ? 'A fictional athlete, deterministic dates, and sample workout history. No personal Sheet data is included.' : 'An isolated browser dataset for proving the workflow before cloud-backed Personal use.'}</p>
+            <p className="eyebrow">Data source</p><h2>{mode === 'demo' ? 'Synthetic fixtures' : cloudConnected ? 'Local-first + Supabase' : 'Local test data'}</h2>
+            <p>{mode === 'demo' ? 'A fictional athlete, deterministic dates, and sample workout history. No personal Sheet data is included.' : cloudConnected ? 'Fast local saves with authenticated, revision-checked cloud persistence for cross-device use.' : 'An isolated browser dataset that can be connected to your Personal cloud account.'}</p>
             <ul><li>{state.checkIns.length} check-ins</li><li>{state.workouts.length} completed workouts</li><li>{state.progressions.length} exercise targets</li></ul>
           </Card>
           <Card className="danger-card">

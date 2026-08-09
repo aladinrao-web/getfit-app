@@ -395,6 +395,33 @@ p { color: var(--muted); line-height: 1.55; }
 .personal-readiness-note div { display: grid; gap: 3px; }
 .personal-readiness-note strong { font-size: .82rem; }
 .personal-readiness-note span { color: #7d6b52; font-size: .76rem; line-height: 1.45; }
+.personal-readiness-note.connected { border-color: #bdd9ce; color: var(--green); background: #f2faf6; }
+.personal-readiness-note.connected span { color: #547269; }
+.cloud-sync-card { display: grid; grid-template-columns: minmax(0,.85fr) minmax(360px,1.15fr); align-items: center; gap: 24px; margin-bottom: 14px; padding: 20px 23px; border-color: #cbded7; }
+.cloud-sync-card.status-conflict, .cloud-sync-card.status-error { border-color: #edcbc6; background: #fffaf8; }
+.cloud-sync-copy { display: grid; min-width: 0; flex: 1; gap: 7px; }
+.cloud-sync-copy > p { margin: 0; font-size: .78rem; }
+.cloud-sync-copy > small { color: var(--muted); font-size: .66rem; }
+.cloud-sync-heading { display: flex; align-items: center; gap: 11px; }
+.cloud-sync-heading > div:nth-child(2) { min-width: 0; flex: 1; }
+.cloud-sync-heading .eyebrow { margin: 0 0 2px; }
+.cloud-sync-heading h2 { margin: 0; overflow: hidden; font-size: 1.08rem; text-overflow: ellipsis; white-space: nowrap; }
+.cloud-status-badge { padding: 5px 8px; border-radius: 999px; color: #53655f; background: #edf1ef; font-size: .62rem; font-weight: 780; white-space: nowrap; }
+.cloud-status-badge.synced { color: #2f6954; background: #e2f3ea; }
+.cloud-status-badge.syncing { color: #4c6474; background: #e7f0f6; }
+.cloud-status-badge.offline { color: #876126; background: #fff1d8; }
+.cloud-status-badge.conflict, .cloud-status-badge.error { color: #9e4f48; background: #fde9e6; }
+.cloud-auth-form { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr); width: 100%; gap: 10px; }
+.cloud-auth-form .field { margin: 0; }
+.cloud-auth-form > div { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
+.cloud-sync-actions { display: flex; justify-self: end; gap: 8px; }
+.cloud-config-note { max-width: 380px; margin: 0; color: var(--muted); font-size: .75rem; }
+.mobile-settings-button { position: relative; }
+.cloud-status-dot { position: absolute; top: 7px; right: 7px; width: 8px; height: 8px; border: 2px solid var(--surface); border-radius: 999px; background: #a7ada9; }
+.cloud-status-dot.synced { background: #4e9c72; }
+.cloud-status-dot.syncing { background: #6f99b6; }
+.cloud-status-dot.offline { background: #d4a345; }
+.cloud-status-dot.conflict, .cloud-status-dot.error { background: var(--red); }
 .preset-import-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 14px; padding: 20px 23px; }
 .preset-import-card h2 { margin-bottom: 4px; font-size: 1.15rem; }
 .preset-import-card p { max-width: 720px; margin-bottom: 0; font-size: .8rem; }
@@ -432,6 +459,8 @@ p { color: var(--muted); line-height: 1.55; }
   .next-workout-card .button { grid-column: 1 / -1; width: 100%; }
   .food-row { grid-template-columns: 1.3fr .45fr .45fr; }
   .food-row small { grid-column: 1 / -1; }
+  .cloud-sync-card { grid-template-columns: 1fr; align-items: stretch; }
+  .cloud-sync-actions { justify-self: start; }
 }
 
 @media (max-width: 900px) {
@@ -449,6 +478,7 @@ p { color: var(--muted); line-height: 1.55; }
   .mode-switch-card { align-items: stretch; flex-direction: column; }
   .mode-switch { flex-basis: auto; }
   .preset-import-card, .data-safety-card { align-items: stretch; flex-direction: column; }
+  .cloud-sync-actions { justify-content: flex-start; }
   .data-safety-actions { justify-content: flex-start; }
   .preset-file-button { width: 100%; }
   .sticky-card { position: static; }
@@ -519,6 +549,10 @@ p { color: var(--muted); line-height: 1.55; }
   .modal-actions { flex-direction: column-reverse; }
   .modal-actions .button { width: 100%; }
   .backup-summary { grid-template-columns: 1fr; }
+  .cloud-auth-form { grid-template-columns: 1fr; }
+  .cloud-auth-form > div { grid-column: auto; flex-direction: column; }
+  .cloud-auth-form .button, .cloud-sync-actions .button { width: 100%; }
+  .cloud-sync-actions { flex-direction: column; }
   .progress-summary-grid { grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
   .progress-summary-grid .card { min-height: 105px; display: flex; flex-direction: column; align-items: flex-start; padding: 13px; }
   .progress-summary-grid .icon-tile { width: 34px; height: 34px; border-radius: 10px; }
