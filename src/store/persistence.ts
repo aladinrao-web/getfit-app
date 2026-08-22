@@ -2,8 +2,10 @@ import { createPersonalState, createSyntheticState } from '../data/seed'
 import { getSystemTimeZone } from '../domain/date'
 import { canCompleteCheckIn } from '../domain/checkIn'
 import type { AppMode, FitnessState } from '../domain/types'
+import { migrateExerciseSetsInState } from '../domain/exerciseSets'
+import { serializeLegacyPersonalBackup } from '../domain/backup'
 
-export const SCHEMA_VERSION = 3
+export const SCHEMA_VERSION = 4
 export const ACTIVE_MODE_KEY = 'getfit-active-mode-v1'
 export const LEGACY_DEMO_KEY = 'getfit-demo-state-v1'
 export const PRE_CHANGE_BACKUP_KEY = 'getfit-personal-pre-change-backup-v1'
@@ -27,18 +29,19 @@ function initialState(mode: AppMode) {
 }
 
 export function normalizeState(state: FitnessState, mode: AppMode, inferLegacyCompletion = false): FitnessState {
-  const timezone = state.profile.timezone || (mode === 'demo' ? 'Asia/Calcutta' : getSystemTimeZone())
-  const progressionBaselines = state.progressionBaselines?.length
-    ? state.progressionBaselines
-    : state.progressions.map((progression) => ({ ...progression }))
+  const migratedState = migrateExerciseSetsInState(state)
+  const timezone = migratedState.profile.timezone || (mode === 'demo' ? 'Asia/Calcutta' : getSystemTimeZone())
+  const progressionBaselines = migratedState.progressionBaselines?.length
+    ? migratedState.progressionBaselines
+    : migratedState.progressions.map((progression) => ({ ...progression }))
   return {
-    ...state,
+    ...migratedState,
     profile: {
-      ...state.profile,
+      ...migratedState.profile,
       timezone,
-      startingWeightKg: state.profile.startingWeightKg ?? (mode === 'demo' ? 66.8 : state.profile.currentWeightKg),
+      startingWeightKg: migratedState.profile.startingWeightKg ?? (mode === 'demo' ? 66.8 : migratedState.profile.currentWeightKg),
     },
-    checkIns: state.checkIns.map((entry) => {
+    checkIns: migratedState.checkIns.map((entry) => {
       const normalized = {
         ...entry,
         id: entry.id || `${mode}-checkin-${entry.date}`,
@@ -60,6 +63,9 @@ function readEnvelope(storage: StorageAdapter, mode: AppMode): PersistedFitnessS
   try {
     const parsed = JSON.parse(raw) as PersistedFitnessState & { schemaVersion: number }
     if (parsed.schemaVersion < 1 || parsed.schemaVersion > SCHEMA_VERSION || parsed.mode !== mode || !parsed.state) return null
+    if (mode === 'personal' && parsed.schemaVersion < SCHEMA_VERSION) {
+      storage.setItem(PRE_CHANGE_BACKUP_KEY, serializeLegacyPersonalBackup(parsed.state, new Date().toISOString()))
+    }
     return { ...parsed, schemaVersion: SCHEMA_VERSION, state: normalizeState(parsed.state, mode, parsed.schemaVersion < 2) }
   } catch {
     return null

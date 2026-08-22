@@ -133,8 +133,15 @@ function makeCheckIns(): DailyCheckIn[] {
   return entries
 }
 
-function result(exerciseId: string, weightKg: number, reps: number[], decision: ProgressionDecision, limitingFactor = '', formNotes = ''): ExerciseResult {
-  return { exerciseId, weightKg, reps, decision, limitingFactor, formNotes }
+function result(exerciseId: string, weightKg: number | number[], reps: number[], decision: ProgressionDecision, limitingFactor = '', formNotes = ''): ExerciseResult {
+  const weights = Array.isArray(weightKg) ? weightKg : reps.map(() => weightKg)
+  return {
+    exerciseId,
+    sets: reps.map((setReps, index) => ({ weightKg: weights[index] ?? weights.at(-1) ?? 0, reps: setReps })),
+    decision,
+    limitingFactor,
+    formNotes,
+  }
 }
 
 function session(id: string, date: string, workout: WorkoutCode, results: ExerciseResult[], notes = ''): WorkoutSession {
@@ -149,9 +156,9 @@ function makeWorkouts(): WorkoutSession[] {
     session('demo-a2', '2026-07-22', 'A', [result('incline-press', 14, [10, 10, 9], 'Repeat', 'Right-wrist stability'), result('pec-deck', 32.5, [12, 12, 12], 'Repeat'), result('cable-fly', 12.5, [12, 12, 12], 'Repeat')]),
     session('demo-b2', '2026-07-25', 'B', [result('shoulder-press', 12.5, [9, 8, 8], 'Repeat'), result('rdl', 10, [10, 10, 10], 'Technique focus', 'Technique confidence'), result('triceps', 12.5, [12, 10, 10], 'Repeat', 'Triceps fatigue')]),
     session('demo-c2', '2026-07-28', 'C', [result('pulldown', 42.5, [10, 8, 8], 'Deload', 'Fatigue and shortened range'), result('supported-row', 37.5, [12, 11, 11], 'Repeat'), result('one-arm-row', 16, [15, 15, 15], 'Technique focus', 'Rear delts dominated')]),
-    session('demo-a3', '2026-08-01', 'A', [result('incline-press', 14, [11, 10, 10], 'Repeat', 'Right-wrist stability'), result('pec-deck', 32.5, [13, 13, 13], 'Increase'), result('lateral-raise', 6, [12, 11, 18], 'Repeat')]),
+    session('demo-a3', '2026-08-01', 'A', [result('incline-press', 14, [11, 10, 10], 'Repeat', 'Right-wrist stability'), result('pec-deck', 32.5, [13, 13, 13], 'Increase'), result('lateral-raise', [6, 6, 4], [12, 11, 18], 'Repeat')]),
     session('demo-b3', '2026-08-04', 'B', [result('shoulder-press', 12.5, [9, 9, 8], 'Repeat', 'Right-hand stability'), result('leg-extension', 17.5, [15, 15, 15], 'Technique focus', 'Shin-pad discomfort'), result('rdl', 10, [10, 10, 10], 'Technique focus')]),
-    session('demo-c3', '2026-08-07', 'C', [result('pulldown', 40, [10, 10, 10], 'Repeat'), result('supported-row', 37.5, [12, 12, 11], 'Repeat', 'General fatigue'), result('one-arm-row', 16, [15, 15, 15], 'Technique focus', 'Rear delts dominated'), result('biceps', 10, [10, 12, 12], 'Repeat', 'Grip fatigue', 'Back-off sets at 8 kg.')]),
+    session('demo-c3', '2026-08-07', 'C', [result('pulldown', 40, [10, 10, 10], 'Repeat'), result('supported-row', 37.5, [12, 12, 11], 'Repeat', 'General fatigue'), result('one-arm-row', 16, [15, 15, 15], 'Technique focus', 'Rear delts dominated'), result('biceps', [10, 8, 8], [10, 12, 12], 'Repeat', 'Grip fatigue', 'Back-off sets at 8 kg.')]),
   ]
 }
 

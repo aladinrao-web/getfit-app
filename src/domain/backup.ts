@@ -1,6 +1,7 @@
 import type { FitnessState } from './types'
+import { migrateExerciseSetsInState } from './exerciseSets'
 
-export const PERSONAL_BACKUP_SCHEMA_VERSION = 1
+export const PERSONAL_BACKUP_SCHEMA_VERSION = 2
 
 export interface PersonalBackupCounts {
   checkIns: number
@@ -45,6 +46,22 @@ function hasUniqueStrings(items: unknown[], key: string) {
   return values.every((value) => typeof value === 'string') && new Set(values).size === values.length
 }
 
+function isNullableFiniteNumber(value: unknown) {
+  return value === null || isFiniteNumber(value)
+}
+
+function isValidExerciseResult(result: unknown, exerciseIds: Set<unknown>) {
+  if (!isRecord(result) || !exerciseIds.has(result.exerciseId)) return false
+  if (Array.isArray(result.sets)) {
+    return result.sets.every((set) => isRecord(set)
+      && isNullableFiniteNumber(set.weightKg)
+      && isNullableFiniteNumber(set.reps))
+  }
+  return isFiniteNumber(result.weightKg)
+    && Array.isArray(result.reps)
+    && result.reps.every((rep) => isNullableFiniteNumber(rep))
+}
+
 function validateState(value: unknown): asserts value is FitnessState {
   if (!isRecord(value)) throw new Error('This file does not contain a fitness state.')
   const requiredArrays = ['mealPresets', 'foodLibrary', 'checkIns', 'exercises', 'progressionBaselines', 'progressions', 'workouts']
@@ -83,12 +100,14 @@ function validateState(value: unknown): asserts value is FitnessState {
     || typeof workout.date !== 'string'
     || typeof workout.completedAt !== 'string'
     || !Array.isArray(workout.results)
-    || workout.results.some((result) => !isRecord(result)
-      || !exerciseIds.has(result.exerciseId)
-      || !isFiniteNumber(result.weightKg)
-      || !Array.isArray(result.reps)
-      || result.reps.some((rep) => rep !== null && !isFiniteNumber(rep))))) {
+    || workout.results.some((result) => !isValidExerciseResult(result, exerciseIds)))) {
     throw new Error('This backup has invalid workout history.')
+  }
+
+  if (value.draftWorkout !== undefined && (!isRecord(value.draftWorkout)
+    || !Array.isArray(value.draftWorkout.results)
+    || value.draftWorkout.results.some((result) => !isValidExerciseResult(result, exerciseIds)))) {
+    throw new Error('This backup has an invalid workout draft.')
   }
 
   const checkIns = value.checkIns as unknown[]
@@ -102,7 +121,7 @@ function validateState(value: unknown): asserts value is FitnessState {
 
 export function parsePersonalState(value: unknown): FitnessState {
   validateState(value)
-  return structuredClone(value)
+  return migrateExerciseSetsInState(structuredClone(value))
 }
 
 export function createPersonalBackup(state: FitnessState, exportedAt = new Date().toISOString()): PersonalBackup {
@@ -128,19 +147,43 @@ export function parsePersonalBackup(raw: string): PersonalBackup {
   }
 
   if (!value || typeof value !== 'object') throw new Error('This file is not a Personal backup.')
-  const candidate = value as Partial<PersonalBackup>
-  if (candidate.backupSchemaVersion !== PERSONAL_BACKUP_SCHEMA_VERSION) {
+  const candidate = value as {
+    backupSchemaVersion?: number
+    sourceMode?: unknown
+    exportedAt?: unknown
+    recordCounts?: PersonalBackupCounts
+    state?: unknown
+  }
+  if (candidate.backupSchemaVersion !== 1 && candidate.backupSchemaVersion !== PERSONAL_BACKUP_SCHEMA_VERSION) {
     throw new Error('This backup version is not supported by this app build.')
   }
   if (candidate.sourceMode !== 'personal') throw new Error('Only Personal workspace backups can be restored here.')
-  if (!candidate.exportedAt || Number.isNaN(Date.parse(candidate.exportedAt))) throw new Error('This backup has an invalid export timestamp.')
-  validateState(candidate.state)
+  if (typeof candidate.exportedAt !== 'string' || Number.isNaN(Date.parse(candidate.exportedAt))) throw new Error('This backup has an invalid export timestamp.')
+  const state = parsePersonalState(candidate.state)
 
-  const actualCounts = countsFor(candidate.state)
+  const actualCounts = countsFor(state)
   const expectedCounts = candidate.recordCounts
   if (!expectedCounts || Object.entries(actualCounts).some(([key, count]) => expectedCounts[key as keyof PersonalBackupCounts] !== count)) {
     throw new Error('This backup failed its record-count integrity check.')
   }
 
-  return candidate as PersonalBackup
+  return {
+    backupSchemaVersion: PERSONAL_BACKUP_SCHEMA_VERSION,
+    sourceMode: 'personal',
+    exportedAt: candidate.exportedAt,
+    recordCounts: actualCounts,
+    state,
+  }
+}
+
+export function serializeLegacyPersonalBackup(state: unknown, exportedAt = new Date().toISOString()) {
+  validateState(state)
+  const normalized = migrateExerciseSetsInState(structuredClone(state))
+  return JSON.stringify({
+    backupSchemaVersion: 1,
+    sourceMode: 'personal',
+    exportedAt,
+    recordCounts: countsFor(normalized),
+    state,
+  }, null, 2)
 }

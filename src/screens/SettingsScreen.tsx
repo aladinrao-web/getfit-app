@@ -261,6 +261,10 @@ export function SettingsScreen() {
             <p>{mode === 'demo' ? 'A fictional athlete, deterministic dates, and sample workout history. No personal Sheet data is included.' : cloudConnected ? 'Fast local saves with authenticated, revision-checked cloud persistence for cross-device use.' : 'An isolated browser dataset that can be connected to your Personal cloud account.'}</p>
             <ul><li>{state.checkIns.length} check-ins</li><li>{state.workouts.length} completed workouts</li><li>{state.progressions.length} exercise targets</li></ul>
           </Card>
+          <Card className="developer-card">
+            <p className="eyebrow">About getFit</p>
+            <p>Developed by <strong>Kovid</strong></p>
+          </Card>
           <Card className="danger-card">
             <div><AlertTriangle size={20} /><h3>Reset {mode === 'demo' ? 'demo' : 'Personal test data'}</h3></div>
             <p>{mode === 'demo' ? 'Restore the original synthetic fixtures.' : 'Clear this local Personal workspace and restore its starter plan. A browser safety copy is saved first; Demo data stays untouched.'}</p>

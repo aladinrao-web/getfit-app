@@ -74,10 +74,14 @@ export interface ExerciseProgression {
   incrementKg: number
 }
 
+export interface ExerciseSetResult {
+  weightKg: number | null
+  reps: number | null
+}
+
 export interface ExerciseResult {
   exerciseId: string
-  weightKg: number
-  reps: Array<number | null>
+  sets: ExerciseSetResult[]
   limitingFactor: string
   formNotes: string
   decision: ProgressionDecision

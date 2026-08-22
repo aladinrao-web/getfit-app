@@ -1,18 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { createPersonalState, createSyntheticState, DEMO_TODAY } from '../data/seed'
 import { applyWorkoutCompletion, correctWorkoutSession, deleteWorkoutSession, startWorkoutDraft } from './workout'
+import { hasIncompleteStartedSet } from './exerciseSets'
 
 describe('workout completion', () => {
   it('does not commit a draft with no recorded reps', () => {
     const state = createSyntheticState()
     const draft = startWorkoutDraft(state, 'A', DEMO_TODAY)
     expect(applyWorkoutCompletion(state, draft)).toBe(state)
+    expect(draft.results.some(hasIncompleteStartedSet)).toBe(false)
   })
 
   it('commits completed exercises and updates matching progression', () => {
     const state = createSyntheticState()
     const draft = startWorkoutDraft(state, 'A', DEMO_TODAY)
-    draft.results[0].reps = [12, 12, 12]
+    draft.results[0].sets = draft.results[0].sets.map((set) => ({ ...set, reps: 12 }))
     draft.results[0].decision = 'Increase'
     const next = applyWorkoutCompletion(state, draft)
     expect(next.workouts).toHaveLength(state.workouts.length + 1)
@@ -23,7 +25,7 @@ describe('workout completion', () => {
   it('upserts the same session rather than duplicating it', () => {
     const state = createSyntheticState()
     const draft = startWorkoutDraft(state, 'B', DEMO_TODAY)
-    draft.results[0].reps = [9, 9, 9]
+    draft.results[0].sets = draft.results[0].sets.map((set) => ({ ...set, reps: 9 }))
     const once = applyWorkoutCompletion(state, draft, '2026-08-08T10:00:00.000Z')
     const twice = applyWorkoutCompletion(once, draft, '2026-08-08T10:05:00.000Z')
     expect(twice.workouts).toHaveLength(once.workouts.length)
@@ -35,7 +37,7 @@ describe('workout completion', () => {
 describe('workout corrections', () => {
   function completedWorkout(state: ReturnType<typeof createPersonalState>, date: string, weightKg: number, decision: 'Increase' | 'Repeat') {
     const draft = startWorkoutDraft(state, 'A', date, `session-${date}`)
-    draft.results[0] = { ...draft.results[0], weightKg, reps: [10, 10, 10], decision }
+    draft.results[0] = { ...draft.results[0], sets: [10, 10, 10].map((reps) => ({ weightKg, reps })), decision }
     return applyWorkoutCompletion(state, draft, `${date}T10:00:00.000Z`)
   }
 
@@ -45,7 +47,7 @@ describe('workout corrections', () => {
     const older = second.workouts.find((session) => session.id === 'session-2026-08-01')!
     const corrected = correctWorkoutSession(second, {
       ...older,
-      results: older.results.map((result) => ({ ...result, weightKg: 7.5, decision: 'Repeat' })),
+      results: older.results.map((result) => ({ ...result, sets: result.sets.map((set) => ({ ...set, weightKg: 7.5 })), decision: 'Repeat' })),
     })
 
     const progression = corrected.progressions.find((item) => item.exerciseId === older.results[0].exerciseId)!
@@ -70,5 +72,33 @@ describe('workout corrections', () => {
     const next = deleteWorkoutSession(completed, 'session-2026-08-01')
 
     expect(next.progressions[0]).toEqual(initial.progressionBaselines[0])
+  })
+
+  it('uses the first completed set as the progression reference while preserving mixed weights', () => {
+    const state = createPersonalState()
+    const draft = startWorkoutDraft(state, 'A', '2026-08-10')
+    draft.results[0] = {
+      ...draft.results[0],
+      sets: [{ weightKg: 12.5, reps: 10 }, { weightKg: 10, reps: 12 }, { weightKg: 10, reps: 11 }],
+      decision: 'Increase',
+    }
+
+    const next = applyWorkoutCompletion(state, draft)
+    const result = next.workouts[0].results[0]
+    const progression = next.progressions.find((item) => item.exerciseId === result.exerciseId)!
+
+    expect(result.sets).toEqual(draft.results[0].sets)
+    expect(progression.currentWeightKg).toBe(14.5)
+    expect(progression.lastResult).toBe('12.5 kg × 10 · 10 kg × 12 / 11')
+  })
+
+  it('ignores empty and half-entered sets when committing', () => {
+    const state = createPersonalState()
+    const draft = startWorkoutDraft(state, 'A', '2026-08-10')
+    draft.results[0].sets = [{ weightKg: 10, reps: 10 }, { weightKg: 10, reps: null }, { weightKg: null, reps: 12 }]
+
+    const next = applyWorkoutCompletion(state, draft)
+
+    expect(next.workouts[0].results[0].sets).toEqual([{ weightKg: 10, reps: 10 }])
   })
 })

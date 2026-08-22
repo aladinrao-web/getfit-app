@@ -1,8 +1,9 @@
 import { strToU8, zipSync, type Zippable } from 'fflate'
 import { createPersonalBackup, PERSONAL_BACKUP_SCHEMA_VERSION, serializePersonalBackup } from './backup'
 import type { Exercise, FitnessState, WorkoutCode } from './types'
+import { completedExerciseSets } from './exerciseSets'
 
-export const PORTABLE_EXPORT_SCHEMA_VERSION = 1
+export const PORTABLE_EXPORT_SCHEMA_VERSION = 2
 
 const fileNames = {
   backup: 'personal-backup.json',
@@ -22,6 +23,7 @@ export interface PortableExportManifest {
     weightEntries: number
     workoutSessions: number
     workoutResults: number
+    workoutSets: number
     exercises: number
     progressionTargets: number
     draftWorkout: number
@@ -98,7 +100,7 @@ function createWorkoutsCsv(state: FitnessState) {
     .flatMap((session) => session.results
       .map((result, resultIndex) => ({ result, resultIndex, exercise: exercises.get(result.exerciseId) }))
       .sort((left, right) => (left.exercise?.order ?? left.resultIndex) - (right.exercise?.order ?? right.resultIndex))
-      .map(({ result, exercise }) => [
+      .flatMap(({ result, exercise }) => completedExerciseSets(result).map((set, setIndex) => [
         session.id,
         session.date,
         session.workout,
@@ -106,17 +108,14 @@ function createWorkoutsCsv(state: FitnessState) {
         result.exerciseId,
         exercise?.name ?? result.exerciseId,
         exercise?.order ?? '',
-        result.weightKg,
-        result.reps[0] ?? '',
-        result.reps[1] ?? '',
-        result.reps[2] ?? '',
-        result.reps.map((rep) => rep ?? '').join('|'),
-        result.skipped ?? false,
+        setIndex + 1,
+        set.weightKg,
+        set.reps,
         result.decision,
         result.limitingFactor,
         result.formNotes,
         session.sessionNotes,
-      ]))
+      ])))
 
   return {
     rows,
@@ -128,12 +127,9 @@ function createWorkoutsCsv(state: FitnessState) {
       'exercise_id',
       'exercise_name',
       'exercise_order',
+      'set_index',
       'weight_kg',
-      'set_1_reps',
-      'set_2_reps',
-      'set_3_reps',
-      'all_reps',
-      'skipped',
+      'reps',
       'decision',
       'limiting_factor',
       'form_notes',
@@ -202,7 +198,8 @@ export function createPortableSnapshot(state: FitnessState, exportedAt = new Dat
       checkIns: state.checkIns.length,
       weightEntries: weights.rows.length,
       workoutSessions: state.workouts.length,
-      workoutResults: workouts.rows.length,
+      workoutResults: state.workouts.reduce((count, session) => count + session.results.length, 0),
+      workoutSets: workouts.rows.length,
       exercises: state.exercises.length,
       progressionTargets: state.progressions.length,
       draftWorkout: state.draftWorkout ? 1 : 0,

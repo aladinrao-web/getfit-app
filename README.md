@@ -6,6 +6,7 @@ A mobile-first lean-gain and beginner-strength tracker built around fast meal ch
 
 - [Personal-use PRD](docs/PRD.md) — product outcomes, user stories, requirements, test strategy, risks, and release gates.
 - [Decision log](docs/DECISION_LOG.md) — timeline, rationale, alternatives, consequences, and revisit triggers for material decisions.
+- [Changelog](CHANGELOG.md) — dated summaries of user-facing additions, changes, and fixes.
 
 ## Run locally
 

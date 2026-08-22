@@ -1,5 +1,6 @@
 import type { DraftWorkout, Exercise, ExerciseProgression, ExerciseResult, FitnessState, ProgressionDecision, WorkoutCode, WorkoutSession } from './types'
 import { createRecordId } from './ids'
+import { completedExerciseSets, hasCompletedExerciseSet } from './exerciseSets'
 
 const cycle: WorkoutCode[] = ['A', 'B', 'C']
 
@@ -15,8 +16,7 @@ export function startWorkoutDraft(state: FitnessState, code: WorkoutCode, date: 
     const progression = state.progressions.find((item) => item.exerciseId === exercise.id)
     return {
       exerciseId: exercise.id,
-      weightKg: progression?.currentWeightKg ?? 0,
-      reps: exercise.targetReps.map(() => null),
+      sets: exercise.targetReps.map(() => ({ weightKg: progression?.currentWeightKg ?? 0, reps: null })),
       limitingFactor: '',
       formNotes: '',
       decision: progression?.decision ?? 'Repeat',
@@ -33,27 +33,42 @@ export function startWorkoutDraft(state: FitnessState, code: WorkoutCode, date: 
 }
 
 export function formatExerciseResult(result: ExerciseResult) {
-  const reps = result.reps.filter((value): value is number => value !== null)
-  return `${result.weightKg} kg × ${reps.length ? reps.join(' / ') : 'not reported'}`
+  const sets = completedExerciseSets(result)
+  if (!sets.length) return 'Not reported'
+
+  const groups = sets.reduce<Array<{ weightKg: number; reps: number[] }>>((all, set) => {
+    const latest = all.at(-1)
+    if (latest?.weightKg === set.weightKg) latest.reps.push(set.reps)
+    else all.push({ weightKg: set.weightKg, reps: [set.reps] })
+    return all
+  }, [])
+
+  return groups.map((group) => `${group.weightKg} kg × ${group.reps.join(' / ')}`).join(' · ')
+}
+
+function referenceWeight(result: ExerciseResult) {
+  return completedExerciseSets(result)[0]?.weightKg ?? 0
 }
 
 function nextTargetFor(decision: ProgressionDecision, result: ExerciseResult, progression: ExerciseProgression, exercise: Exercise) {
   const target = exercise.targetReps.join(' / ')
-  if (decision === 'Increase') return `${result.weightKg + progression.incrementKg} kg × ${target}`
-  if (decision === 'Deload') return `${Math.max(0, result.weightKg - progression.incrementKg)} kg × ${target} with clean form`
-  if (decision === 'Technique focus') return `${result.weightKg} kg × ${target} with technique as the priority`
-  return `${result.weightKg} kg × ${target}`
+  const weightKg = referenceWeight(result)
+  if (decision === 'Increase') return `${weightKg + progression.incrementKg} kg × ${target}`
+  if (decision === 'Deload') return `${Math.max(0, weightKg - progression.incrementKg)} kg × ${target} with clean form`
+  if (decision === 'Technique focus') return `${weightKg} kg × ${target} with technique as the priority`
+  return `${weightKg} kg × ${target}`
 }
 
 function progressionFromResult(result: ExerciseResult, progression: ExerciseProgression, exercise: Exercise): ExerciseProgression {
+  const weightKg = referenceWeight(result)
   return {
     ...progression,
     currentWeightKg:
       result.decision === 'Increase'
-        ? result.weightKg + progression.incrementKg
+        ? weightKg + progression.incrementKg
         : result.decision === 'Deload'
-          ? Math.max(0, result.weightKg - progression.incrementKg)
-          : result.weightKg,
+          ? Math.max(0, weightKg - progression.incrementKg)
+          : weightKg,
     lastResult: formatExerciseResult(result),
     nextTarget: nextTargetFor(result.decision, result, progression, exercise),
     limitingFactor: result.limitingFactor,
@@ -108,7 +123,9 @@ export function deleteWorkoutSession(state: FitnessState, sessionId: string): Fi
 }
 
 export function applyWorkoutCompletion(state: FitnessState, draft: DraftWorkout, completedAt = new Date().toISOString()): FitnessState {
-  const completedResults = draft.results.filter((result) => !result.skipped && result.reps.some((value) => value !== null))
+  const completedResults = draft.results
+    .filter((result) => !result.skipped && hasCompletedExerciseSet(result))
+    .map((result) => ({ ...result, sets: completedExerciseSets(result) }))
   if (!completedResults.length) return state
 
   const existingIndex = state.workouts.findIndex((workout) => workout.id === draft.id)

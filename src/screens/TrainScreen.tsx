@@ -3,6 +3,7 @@ import { AlertCircle, ArrowLeft, Check, ChevronDown, Clock3, Dumbbell, Flag, Pen
 import { formatLongDate, formatShortDate } from '../domain/calculations'
 import { correctWorkoutSession, formatExerciseResult, getNextWorkoutCode } from '../domain/workout'
 import type { ExerciseResult, ProgressionDecision, WorkoutCode, WorkoutSession } from '../domain/types'
+import { hasCompletedExerciseSet, hasIncompleteStartedSet } from '../domain/exerciseSets'
 import { useFitness } from '../store/FitnessContext'
 import { Button, Card, Field, PageHeader, SectionHeading, StatusPill } from '../components/ui'
 
@@ -89,12 +90,14 @@ function ActiveWorkout({ onCompleted }: { onCompleted: () => void }) {
   const { state, updateDraftResult, updateDraftNotes, discardDraft, completeWorkout } = useFitness()
   const [reviewing, setReviewing] = useState(false)
   const draft = state.draftWorkout!
-  const completed = draft.results.filter((result) => !result.skipped && result.reps.some((rep) => rep !== null))
+  const completed = draft.results.filter((result) => !result.skipped && hasCompletedExerciseSet(result))
+  const hasIncompleteSets = draft.results.some((result) => !result.skipped && hasIncompleteStartedSet(result))
 
-  function updateRep(result: ExerciseResult, index: number, value: string) {
-    const reps = [...result.reps]
-    reps[index] = value === '' ? null : Number(value)
-    updateDraftResult(result.exerciseId, { reps })
+  function updateSet(result: ExerciseResult, index: number, field: 'weightKg' | 'reps', value: string) {
+    const sets = result.sets.map((set, setIndex) => setIndex === index
+      ? { ...set, [field]: value === '' ? null : Number(value) }
+      : set)
+    updateDraftResult(result.exerciseId, { sets })
   }
 
   function handleDiscard() {
@@ -129,9 +132,13 @@ function ActiveWorkout({ onCompleted }: { onCompleted: () => void }) {
               </div>
               {!result.skipped && <>
                 <div className="target-strip"><div><span>Last result</span><strong>{progression.lastResult}</strong></div><div><span>Today’s target</span><strong>{progression.nextTarget}</strong></div><div><span>Warm-up</span><strong>{exercise.warmup}</strong></div></div>
-                <div className="set-entry-grid">
-                  <Field label="Weight"><div className="unit-input compact"><input type="number" step="0.5" value={result.weightKg} onChange={(event) => updateDraftResult(result.exerciseId, { weightKg: Number(event.target.value) })} /><span>kg</span></div></Field>
-                  {result.reps.map((rep, index) => <Field key={index} label={`Set ${index + 1}`}><div className="unit-input compact"><input inputMode="numeric" type="number" min="0" value={rep ?? ''} placeholder={`${exercise.targetReps[index] ?? '—'}`} onChange={(event) => updateRep(result, index, event.target.value)} /><span>reps</span></div></Field>)}
+                <div className="set-log" aria-label={`${exercise.name} sets`}>
+                  <div className="set-log-header"><span>Set</span><span>Weight</span><span>Reps</span></div>
+                  {result.sets.map((set, index) => <div className="set-log-row" key={index}>
+                    <div className="set-number"><strong>{index + 1}</strong><span>Target {exercise.targetReps[index] ?? '—'}</span></div>
+                    <div className="unit-input compact"><input aria-label={`${exercise.name} set ${index + 1} weight`} type="number" min="0" step="0.5" value={set.weightKg ?? ''} onChange={(event) => updateSet(result, index, 'weightKg', event.target.value)} /><span>kg</span></div>
+                    <div className="unit-input compact"><input aria-label={`${exercise.name} set ${index + 1} reps`} inputMode="numeric" type="number" min="0" value={set.reps ?? ''} placeholder={`${exercise.targetReps[index] ?? '—'}`} onChange={(event) => updateSet(result, index, 'reps', event.target.value)} /><span>reps</span></div>
+                  </div>)}
                 </div>
                 <details className="exercise-details">
                   <summary>Context & progression <ChevronDown size={17} /></summary>
@@ -149,7 +156,7 @@ function ActiveWorkout({ onCompleted }: { onCompleted: () => void }) {
 
       <Card className="session-note-card"><Field label="Session note" hint="Optional. Keep it short."><textarea rows={3} value={draft.sessionNotes} placeholder="Example: shortened session; legs moved to next time." onChange={(event) => updateDraftNotes(event.target.value)} /></Field></Card>
 
-      <div className="finish-bar"><div><strong>{completed.length}</strong><span>of {draft.results.length} exercises have recorded reps</span></div><Button disabled={!completed.length} onClick={() => setReviewing(true)}><Flag size={18} />Review & finish</Button></div>
+      <div className="finish-bar"><div><strong>{completed.length}</strong><span>of {draft.results.length} exercises have complete sets</span>{hasIncompleteSets && <small>Finish or clear sets missing weight or reps.</small>}</div><Button disabled={!completed.length || hasIncompleteSets} onClick={() => setReviewing(true)}><Flag size={18} />Review & finish</Button></div>
 
       {reviewing && (
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Review workout">
@@ -201,10 +208,11 @@ function SessionDetail({ session, canCorrect, onClose, onCorrect, onDelete }: { 
     }))
   }
 
-  function updateRep(result: ExerciseResult, index: number, value: string) {
-    const reps = [...result.reps]
-    reps[index] = value === '' ? null : Number(value)
-    updateResult(result.exerciseId, { reps })
+  function updateSet(result: ExerciseResult, index: number, field: 'weightKg' | 'reps', value: string) {
+    const sets = result.sets.map((set, setIndex) => setIndex === index
+      ? { ...set, [field]: value === '' ? null : Number(value) }
+      : set)
+    updateResult(result.exerciseId, { sets })
   }
 
   function handleDelete() {
@@ -240,9 +248,13 @@ function SessionDetail({ session, canCorrect, onClose, onCorrect, onDelete }: { 
               const exercise = state.exercises.find((item) => item.id === result.exerciseId)
               return <div className="correction-exercise" key={result.exerciseId}>
                 <div className="correction-exercise-head"><strong>{exercise?.name ?? result.exerciseId}</strong><button className="text-danger-button" onClick={() => setDraft((current) => ({ ...current, results: current.results.filter((item) => item.exerciseId !== result.exerciseId) }))}><Trash2 size={15} />Remove</button></div>
-                <div className="set-entry-grid correction-set-grid">
-                  <Field label="Weight"><div className="unit-input compact"><input type="number" min="0" step="0.5" value={result.weightKg} onChange={(event) => updateResult(result.exerciseId, { weightKg: Number(event.target.value) })} /><span>kg</span></div></Field>
-                  {result.reps.map((rep, index) => <Field key={index} label={`Set ${index + 1}`}><div className="unit-input compact"><input type="number" min="0" value={rep ?? ''} onChange={(event) => updateRep(result, index, event.target.value)} /><span>reps</span></div></Field>)}
+                <div className="set-log correction-set-log">
+                  <div className="set-log-header"><span>Set</span><span>Weight</span><span>Reps</span></div>
+                  {result.sets.map((set, index) => <div className="set-log-row" key={index}>
+                    <div className="set-number"><strong>{index + 1}</strong></div>
+                    <div className="unit-input compact"><input aria-label={`${exercise?.name ?? result.exerciseId} set ${index + 1} weight`} type="number" min="0" step="0.5" value={set.weightKg ?? ''} onChange={(event) => updateSet(result, index, 'weightKg', event.target.value)} /><span>kg</span></div>
+                    <div className="unit-input compact"><input aria-label={`${exercise?.name ?? result.exerciseId} set ${index + 1} reps`} type="number" min="0" value={set.reps ?? ''} onChange={(event) => updateSet(result, index, 'reps', event.target.value)} /><span>reps</span></div>
+                  </div>)}
                 </div>
                 <div className="detail-fields correction-detail-fields">
                   <Field label="Limiting factor"><select value={result.limitingFactor} onChange={(event) => updateResult(result.exerciseId, { limitingFactor: event.target.value })}>{limiters.map((limiter) => <option value={limiter} key={limiter}>{limiter || 'Nothing notable'}</option>)}</select></Field>
@@ -254,7 +266,7 @@ function SessionDetail({ session, canCorrect, onClose, onCorrect, onDelete }: { 
             <Field label="Session note"><textarea rows={2} value={draft.sessionNotes} onChange={(event) => setDraft((current) => ({ ...current, sessionNotes: event.target.value }))} /></Field>
           </div>
           <div className="correction-note"><RotateCcw size={17} /><div><strong>Progression impact after saving</strong><span>This session keeps its ID; later results still win.</span><ul>{progressionPreview.map(({ exerciseId, exercise, progression }) => <li key={exerciseId}><span>{exercise?.name ?? exerciseId}</span><strong>{progression?.nextTarget ?? 'No target change'}</strong></li>)}</ul></div></div>
-          <div className="modal-actions"><Button variant="secondary" onClick={() => { setDraft(structuredClone(session)); setEditing(false) }}><ArrowLeft size={17} />Cancel</Button><Button disabled={!draft.date || !draft.results.length || draft.results.some((result) => !result.reps.some((rep) => rep !== null))} onClick={() => onCorrect(draft)}><Save size={17} />Save correction</Button></div>
+          <div className="modal-actions"><Button variant="secondary" onClick={() => { setDraft(structuredClone(session)); setEditing(false) }}><ArrowLeft size={17} />Cancel</Button><Button disabled={!draft.date || !draft.results.length || draft.results.some((result) => !hasCompletedExerciseSet(result) || hasIncompleteStartedSet(result))} onClick={() => onCorrect(draft)}><Save size={17} />Save correction</Button></div>
         </>}
       </Card>
     </div>

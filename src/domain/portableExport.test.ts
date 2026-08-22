@@ -48,8 +48,7 @@ function createPopulatedState() {
     sessionNotes: 'Steady, controlled work',
     results: [{
       exerciseId: state.exercises[0].id,
-      weightKg: 12.5,
-      reps: [10, 10, 9],
+      sets: [{ weightKg: 12.5, reps: 10 }, { weightKg: 12.5, reps: 10 }, { weightKg: 10, reps: 12 }],
       decision: 'Repeat',
       limitingFactor: 'Grip, then fatigue',
       formNotes: 'Line one\n"Quote" and comma, retained',
@@ -80,8 +79,8 @@ describe('Portable Personal snapshot', () => {
     ])
     expect(parsePersonalBackup(snapshot.files['personal-backup.json']).state).toEqual(state)
     expect(snapshot.manifest).toMatchObject({
-      exportSchemaVersion: 1,
-      backupSchemaVersion: 1,
+      exportSchemaVersion: 2,
+      backupSchemaVersion: 2,
       sourceMode: 'personal',
       exportedAt,
       recordCounts: {
@@ -89,6 +88,7 @@ describe('Portable Personal snapshot', () => {
         weightEntries: 2,
         workoutSessions: 1,
         workoutResults: 1,
+        workoutSets: 3,
         exercises: 12,
         progressionTargets: 12,
         draftWorkout: 0,
@@ -105,6 +105,8 @@ describe('Portable Personal snapshot', () => {
     expect(weights.indexOf('check-earlier')).toBeLessThan(weights.indexOf('check-later'))
     expect(workouts).toContain('"Grip, then fatigue"')
     expect(workouts).toContain('"Line one\n""Quote"" and comma, retained"')
+    expect(workouts).toContain('set_index,weight_kg,reps')
+    expect(workouts).toContain(',3,10,12,Repeat,')
     expect(progressions).toContain('\'=HYPERLINK(""https://example.com"")')
   })
 
@@ -126,6 +128,7 @@ describe('Portable Personal snapshot', () => {
     expect(snapshot.manifest.recordCounts.weightEntries).toBe(0)
     expect(snapshot.manifest.recordCounts.workoutSessions).toBe(0)
     expect(snapshot.manifest.recordCounts.workoutResults).toBe(0)
+    expect(snapshot.manifest.recordCounts.workoutSets).toBe(0)
     expect(snapshot.files['weights.csv'].trim().split(/\r?\n/)).toHaveLength(1)
     expect(snapshot.files['workouts.csv'].trim().split(/\r?\n/)).toHaveLength(1)
     expect(snapshot.files['progression.csv'].trim().split(/\r?\n/)).toHaveLength(13)
