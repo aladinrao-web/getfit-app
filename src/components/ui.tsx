@@ -48,10 +48,10 @@ export function ProgressBar({ value, max = 1, label }: { value: number; max?: nu
 
 export function StatusPill({ status }: { status: ProteinStatus | ProgressionDecision | string }) {
   const tone =
-    status === 'Target met' || status === 'Increase' ? 'green'
-      : status === 'Below floor' || status === 'Deload' ? 'red'
-      : status === 'In line' || status === 'Repeat' ? 'amber'
-          : status === 'In progress' || status === 'Technique focus' ? 'blue' : 'neutral'
+    status === 'Target met' || status === 'Increase' || status === 'On target' ? 'green'
+      : status === 'Below floor' || status === 'Deload' || status === 'Neglected' ? 'red'
+      : status === 'In line' || status === 'Repeat' || status === 'Building' ? 'amber'
+          : status === 'In progress' || status === 'Technique focus' || status === 'High' ? 'blue' : 'neutral'
   return <span className={`status-pill status-${tone}`}>{status}</span>
 }
 

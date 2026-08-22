@@ -130,4 +130,29 @@ describe('mode persistence', () => {
     expect(migrated.workouts[0].results[0].sets).toEqual(current.workouts[0].results[0].sets)
     expect(safetyCopy.state.workouts[0].results[0].sets).toEqual(current.workouts[0].results[0].sets)
   })
+
+  it('migrates schema-four exercises with primary and secondary muscle metadata', () => {
+    const storage = new MemoryStorage()
+    const current = createPersonalState()
+    const legacyState = structuredClone(current) as unknown as Record<string, unknown>
+    ;(legacyState.exercises as Array<Record<string, unknown>>).forEach((exercise) => {
+      delete exercise.primaryMuscle
+      delete exercise.secondaryMuscles
+    })
+    storage.setItem(MODE_STORAGE_KEYS.personal, JSON.stringify({
+      schemaVersion: 4,
+      mode: 'personal',
+      createdAt: '2026-08-08T10:00:00.000Z',
+      updatedAt: '2026-08-08T10:00:00.000Z',
+      state: legacyState,
+    }))
+
+    const migrated = loadModeState(storage, 'personal')
+
+    expect(migrated.exercises.find((exercise) => exercise.id === 'incline-press')).toMatchObject({
+      primaryMuscle: 'chest',
+      secondaryMuscles: ['front-shoulders', 'triceps'],
+    })
+    expect(storage.getItem(PRE_CHANGE_BACKUP_KEY)).not.toBeNull()
+  })
 })

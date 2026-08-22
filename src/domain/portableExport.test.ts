@@ -79,8 +79,8 @@ describe('Portable Personal snapshot', () => {
     ])
     expect(parsePersonalBackup(snapshot.files['personal-backup.json']).state).toEqual(state)
     expect(snapshot.manifest).toMatchObject({
-      exportSchemaVersion: 2,
-      backupSchemaVersion: 2,
+      exportSchemaVersion: 3,
+      backupSchemaVersion: 3,
       sourceMode: 'personal',
       exportedAt,
       recordCounts: {
@@ -108,6 +108,8 @@ describe('Portable Personal snapshot', () => {
     expect(workouts).toContain('set_index,weight_kg,reps')
     expect(workouts).toContain(',3,10,12,Repeat,')
     expect(progressions).toContain('\'=HYPERLINK(""https://example.com"")')
+    expect(progressions).toContain('primary_muscle,secondary_muscles')
+    expect(progressions).toContain('chest,front-shoulders|triceps')
   })
 
   it('packages deterministic file contents into a readable ZIP archive', async () => {

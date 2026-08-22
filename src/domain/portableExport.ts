@@ -3,7 +3,7 @@ import { createPersonalBackup, PERSONAL_BACKUP_SCHEMA_VERSION, serializePersonal
 import type { Exercise, FitnessState, WorkoutCode } from './types'
 import { completedExerciseSets } from './exerciseSets'
 
-export const PORTABLE_EXPORT_SCHEMA_VERSION = 2
+export const PORTABLE_EXPORT_SCHEMA_VERSION = 3
 
 const fileNames = {
   backup: 'personal-backup.json',
@@ -154,6 +154,8 @@ function createProgressionCsv(state: FitnessState) {
       exercise?.workout ?? '',
       exercise?.order ?? '',
       exercise?.targetReps.join('|') ?? '',
+      exercise?.primaryMuscle ?? '',
+      exercise?.secondaryMuscles.join('|') ?? '',
       progression.currentWeightKg,
       progression.incrementKg,
       progression.lastResult,
@@ -171,6 +173,8 @@ function createProgressionCsv(state: FitnessState) {
       'workout_code',
       'exercise_order',
       'target_reps',
+      'primary_muscle',
+      'secondary_muscles',
       'current_weight_kg',
       'increment_kg',
       'last_result',

@@ -1,7 +1,71 @@
 import { describe, expect, it } from 'vitest'
 import { createPersonalState, createSyntheticState, DEMO_TODAY } from '../data/seed'
-import { applyWorkoutCompletion, correctWorkoutSession, deleteWorkoutSession, startWorkoutDraft } from './workout'
+import { addDraftExercise, applyWorkoutCompletion, correctWorkoutSession, deleteWorkoutSession, moveDraftExercise, removeDraftExercise, replaceDraftExercise, startWorkoutDraft } from './workout'
 import { hasIncompleteStartedSet } from './exerciseSets'
+
+describe('workout draft exercises', () => {
+  it('adjusts a draft without changing the saved A/B/C exercise assignments', () => {
+    const state = createPersonalState()
+    const draft = startWorkoutDraft(state, 'A', DEMO_TODAY)
+    const originalAssignments = state.exercises.map((exercise) => ({ id: exercise.id, workout: exercise.workout, order: exercise.order }))
+
+    const added = addDraftExercise(state, draft, 'shoulder-press')
+    const moved = moveDraftExercise(added, 'shoulder-press', -1)
+    const removed = removeDraftExercise(moved, 'pec-deck')
+
+    expect(added.results.at(-1)).toMatchObject({
+      exerciseId: 'shoulder-press',
+      decision: state.progressions.find((item) => item.exerciseId === 'shoulder-press')?.decision,
+    })
+    expect(added.results.at(-1)?.sets).toEqual(state.exercises.find((item) => item.id === 'shoulder-press')?.targetReps.map(() => ({
+      weightKg: state.progressions.find((item) => item.exerciseId === 'shoulder-press')?.currentWeightKg,
+      reps: null,
+    })))
+    expect(moved.results.at(-2)?.exerciseId).toBe('shoulder-press')
+    expect(removed.results.some((result) => result.exerciseId === 'pec-deck')).toBe(false)
+    expect(state.exercises.map((exercise) => ({ id: exercise.id, workout: exercise.workout, order: exercise.order }))).toEqual(originalAssignments)
+  })
+
+  it('replaces only with an unused exercise for the same primary muscle', () => {
+    const state = createPersonalState()
+    const draft = startWorkoutDraft(state, 'A', DEMO_TODAY)
+
+    const withoutCableFly = removeDraftExercise(draft, 'cable-fly')
+    const replaced = replaceDraftExercise(state, withoutCableFly, 'pec-deck', 'cable-fly')
+    const wrongMuscle = replaceDraftExercise(state, draft, 'pec-deck', 'leg-extension')
+    const duplicate = replaceDraftExercise(state, draft, 'pec-deck', 'incline-press')
+
+    expect(replaced.results.some((result) => result.exerciseId === 'pec-deck')).toBe(false)
+    expect(replaced.results.some((result) => result.exerciseId === 'cable-fly')).toBe(true)
+    expect(wrongMuscle).toBe(draft)
+    expect(duplicate).toBe(draft)
+  })
+
+  it('prevents duplicate additions and keeps at least one draft exercise', () => {
+    const state = createPersonalState()
+    const draft = startWorkoutDraft(state, 'A', DEMO_TODAY)
+    const duplicate = addDraftExercise(state, draft, draft.results[0].exerciseId)
+    const single = { ...draft, results: [draft.results[0]] }
+
+    expect(duplicate).toBe(draft)
+    expect(removeDraftExercise(single, single.results[0].exerciseId)).toBe(single)
+  })
+
+  it('commits a cross-theme addition against its own progression without changing its default theme', () => {
+    const state = createPersonalState()
+    const draft = addDraftExercise(state, startWorkoutDraft(state, 'A', DEMO_TODAY), 'shoulder-press')
+    const added = draft.results.find((result) => result.exerciseId === 'shoulder-press')!
+    added.sets = added.sets.map((set) => ({ ...set, reps: 9 }))
+    added.decision = 'Increase'
+
+    const completed = applyWorkoutCompletion(state, draft)
+
+    expect(completed.workouts.at(-1)).toMatchObject({ workout: 'A' })
+    expect(completed.workouts.at(-1)?.results.some((result) => result.exerciseId === 'shoulder-press')).toBe(true)
+    expect(completed.progressions.find((item) => item.exerciseId === 'shoulder-press')?.decision).toBe('Increase')
+    expect(completed.exercises.find((exercise) => exercise.id === 'shoulder-press')?.workout).toBe('B')
+  })
+})
 
 describe('workout completion', () => {
   it('does not commit a draft with no recorded reps', () => {

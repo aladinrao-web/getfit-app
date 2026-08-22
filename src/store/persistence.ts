@@ -4,8 +4,9 @@ import { canCompleteCheckIn } from '../domain/checkIn'
 import type { AppMode, FitnessState } from '../domain/types'
 import { migrateExerciseSetsInState } from '../domain/exerciseSets'
 import { serializeLegacyPersonalBackup } from '../domain/backup'
+import { migrateMuscleMetadataInState } from '../domain/muscles'
 
-export const SCHEMA_VERSION = 4
+export const SCHEMA_VERSION = 5
 export const ACTIVE_MODE_KEY = 'getfit-active-mode-v1'
 export const LEGACY_DEMO_KEY = 'getfit-demo-state-v1'
 export const PRE_CHANGE_BACKUP_KEY = 'getfit-personal-pre-change-backup-v1'
@@ -29,7 +30,7 @@ function initialState(mode: AppMode) {
 }
 
 export function normalizeState(state: FitnessState, mode: AppMode, inferLegacyCompletion = false): FitnessState {
-  const migratedState = migrateExerciseSetsInState(state)
+  const migratedState = migrateMuscleMetadataInState(migrateExerciseSetsInState(state))
   const timezone = migratedState.profile.timezone || (mode === 'demo' ? 'Asia/Calcutta' : getSystemTimeZone())
   const progressionBaselines = migratedState.progressionBaselines?.length
     ? migratedState.progressionBaselines

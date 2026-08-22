@@ -4,6 +4,20 @@ export type ProteinStatus = 'Not logged' | 'In progress' | 'Below floor' | 'In l
 export type MealSlotKey = 'breakfast' | 'lunch' | 'dinner' | 'shake'
 export type Adherence = 0 | 0.5 | 0.75 | 1
 export type AppMode = 'demo' | 'personal'
+export type MuscleGroup =
+  | 'chest'
+  | 'back-lats'
+  | 'upper-back'
+  | 'front-shoulders'
+  | 'side-shoulders'
+  | 'rear-shoulders'
+  | 'biceps'
+  | 'triceps'
+  | 'quads'
+  | 'hamstrings'
+  | 'glutes'
+  | 'calves'
+  | 'core'
 
 export interface Profile {
   name: string
@@ -58,6 +72,8 @@ export interface Exercise {
   workout: WorkoutCode
   order: number
   name: string
+  primaryMuscle: MuscleGroup
+  secondaryMuscles: MuscleGroup[]
   targetReps: number[]
   warmup: string
   coachingCue: string

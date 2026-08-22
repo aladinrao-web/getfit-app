@@ -6,3 +6,4 @@ dist/
 .private/
 .env.local
 .env.*.local
+supabase/.temp/

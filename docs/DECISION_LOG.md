@@ -93,6 +93,9 @@ Evidence or condition that should reopen the decision.
 | [D-023](#d-023--use-supabase-and-a-revisioned-personal-snapshot) | 2026-08-08 | Accepted | Use Supabase Auth, RLS, and one revisioned state snapshot per user | Preserve atomic app behavior with low operating complexity |
 | [D-024](#d-024--resolve-cloud-conflicts-by-explicit-whole-copy-selection) | 2026-08-09 | Accepted | Compare both snapshots and require an explicit cloud-or-device choice | Preserve deliberate fitness state without unsafe automatic merges |
 | [D-025](#d-025--target-github-pages-behind-an-explicit-public-repository-gate) | 2026-08-09 | Accepted | Publish the audited repository and deploy through GitHub Pages | Align hosting with proof of work while keeping Personal data behind authentication and RLS |
+| [D-026](#d-026-execute-the-sheet-cutover-as-one-guarded-snapshot-replacement) | 2026-08-09 | Accepted | Replace the empty Personal cloud snapshot once from a reconciled private artifact | Complete cutover without adding a permanent importer or exposing Personal data |
+| [D-027](#d-027--use-rolling-effective-set-coverage-before-changing-exercise-plans) | 2026-08-22 | Accepted | Derive 28-day muscle coverage and recommend the smallest relevant training change | Preserve the A/B/C routine while exposing neglected muscles and consistency gaps |
+| [D-028](#d-028--make-exercise-changes-current-session-overrides) | 2026-08-22 | Accepted | Adjust the active draft without rewriting saved A/B/C assignments | Add flexibility while keeping plan structure and progression identities stable |
 
 ## Timeline
 
@@ -1079,3 +1082,86 @@ This keeps a temporary data-transition problem out of the permanent product whil
 ### Revisit when
 
 A later source contains additional history, a second user needs onboarding, or recurring imports become a genuine product requirement.
+
+## D-027 — Use rolling effective-set coverage before changing exercise plans
+
+- Date: 2026-08-22
+- Status: Accepted
+- Owners: Product, Engineering
+- Related: D-003, D-006, D-013, FR-MUS-01 through FR-MUS-07
+
+### Context
+
+The fixed A, B, and C themes remain useful, but the app did not explain which muscle groups were trained, how often they received meaningful work, or whether a gap came from low attendance, incomplete sessions, or exercise selection. Changing exercises too early would hide the more basic issue when workout frequency or completed workload is low.
+
+### Options considered
+
+1. Count workouts only and leave muscle coverage implicit.
+2. Apply one raw-set target to every muscle group.
+3. Derive rolling 28-day coverage from primary and secondary exercise attribution, then recommend the smallest change supported by the data.
+
+### Decision
+
+Use option 3. Each completed primary-muscle set counts as 1.0 effective set and each secondary-muscle set counts as 0.5. A workout becomes a meaningful exposure for a muscle at 2 effective sets. The current 28 days are compared with the preceding 28 days.
+
+Weekly target bands are 6 to 10 effective sets for chest, back/lats, quads, hamstrings, and glutes, and 4 to 8 for upper back, each shoulder section, biceps, triceps, calves, and core. These are general-fit baselines, not automatic prescriptions.
+
+Guidance follows this order: fewer than 8 workouts in 28 days means consistency first; 8 to 11 means frequency toward 3 workouts per week; low session completion means complete more planned workload; otherwise address under-target muscle coverage. When coverage is adequate, a flat body-weight trend points to nutrition or recovery, while sufficient recovery and weight response point to exercise progression.
+
+The app recommends actions only. It does not alter the fixed A, B, or C plans. Exercise replacement and day-level plan editing remain a separate feature.
+
+### Rationale
+
+The hierarchy distinguishes a programming gap from an adherence gap. Rolling windows tolerate calendar-week noise, fractional secondary credit avoids double counting full sets, and group-specific bands are more useful than one universal target. Calculating coverage from committed sessions keeps it consistent with history corrections and the existing workout commit boundary.
+
+### Consequences
+
+- Existing exercises require primary and secondary muscle metadata, with deterministic migration for older Personal state and presets.
+- The Home screen shows one highest-priority focus instead of several competing recommendations.
+- The Progress screen can explain a muscle total through contributing and available exercises.
+- Workout duration remains workload-based; no active timer is introduced.
+- Exercise editing and equipment-aware replacement remain out of scope for this slice.
+
+### Revisit when
+
+Longer Personal data shows that the target bands or hierarchy create misleading guidance, goals become sport-specific, or exercise editing needs equipment, injury, or recovery constraints.
+
+## D-028 — Make exercise changes current-session overrides
+
+- Date: 2026-08-22
+- Status: Accepted
+- Owners: Product, Engineering
+- Related: D-004, D-005, D-006, D-027, US-15, FR-WKO-10 through FR-WKO-14
+
+### Context
+
+The user occasionally needs to change the exercises performed on a specific day without losing the stable A/B/C themes. Permanently editing a plan for a one-day availability or coverage need would add configuration work and could weaken the meaning of the established routine.
+
+### Options considered
+
+1. Make every exercise change a permanent edit to the saved workout plan.
+2. Add a separate versioned workout-template model with save-for-today and save-as-default choices.
+3. Treat changes as overrides to the current workout draft only.
+
+### Decision
+
+Use option 3. The active workout provides a secondary editor that can add any unused library exercise, remove or reorder exercises, and replace an exercise with an unused option sharing its primary muscle. The draft keeps at least one exercise and never contains duplicate exercise IDs.
+
+An added or replacement exercise initializes from its own target reps, current progression weight, and current progression decision. Removing or replacing an exercise after reps are entered requires confirmation. The completed session records the final exercise IDs, so history, progression, and muscle coverage reflect what was actually performed.
+
+The saved workout and order fields on the exercise library remain unchanged. No new database table, cloud API, or snapshot schema is required because the existing draft already stores an ordered result list.
+
+### Rationale
+
+Current-session overrides solve the immediate flexibility problem without adding a persistent template editor or another synchronization concept. Stable exercise IDs preserve progression history, and same-primary-muscle replacement keeps the intended movement role understandable. Cross-theme additions support coverage without silently changing the routine.
+
+### Consequences
+
+- The editor remains visually secondary because it is an occasional path.
+- Default A/B/C cards continue to show the saved plan after an adjusted session.
+- Replacement availability depends on the existing exercise library.
+- Custom exercises, permanent template editing, equipment matching, and injury-aware suggestions remain out of scope.
+
+### Revisit when
+
+The same session adjustments recur often enough to justify saving a new default, or the exercise library needs user-created movements and constraint-aware alternatives.

@@ -9,6 +9,7 @@ import {
   type ConflictResolutionChoice,
   type FitnessStateSummary,
   decideSync,
+  isFitnessSnapshotConflict,
   loadCloudSyncMetadata,
   planConflictResolution,
   saveCloudSyncMetadata,
@@ -57,10 +58,6 @@ interface RemoteSnapshot {
   schema_version: number
   revision: number
   updated_at: string
-}
-
-function isConflict(error: { code?: string; message?: string }) {
-  return error.code === '40001' || error.message?.includes('fitness_snapshot_conflict')
 }
 
 function parseRemoteSnapshot(remote: RemoteSnapshot) {
@@ -161,7 +158,7 @@ export function usePersonalCloud({ mode, state, onRemoteState }: PersonalCloudOp
         })
 
         if (error) {
-          if (isConflict(error)) {
+          if (isFitnessSnapshotConflict(error)) {
             setSyncStatus('syncing')
             setMessage('The cloud changed while this device was saving. Refreshing both copies…')
             syncRequestedRef.current = true
@@ -462,7 +459,7 @@ export function usePersonalCloud({ mode, state, onRemoteState }: PersonalCloudOp
       })
 
       if (error) {
-        if (isConflict(error)) {
+        if (isFitnessSnapshotConflict(error)) {
           setSyncStatus('syncing')
           setMessage('The cloud changed again before replacement. Refreshing the comparison without discarding either copy…')
           syncRequestedRef.current = true

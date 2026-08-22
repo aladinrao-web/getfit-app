@@ -1,7 +1,8 @@
 import type { FitnessState } from './types'
 import { migrateExerciseSetsInState } from './exerciseSets'
+import { migrateMuscleMetadataInState } from './muscles'
 
-export const PERSONAL_BACKUP_SCHEMA_VERSION = 2
+export const PERSONAL_BACKUP_SCHEMA_VERSION = 3
 
 export interface PersonalBackupCounts {
   checkIns: number
@@ -121,7 +122,7 @@ function validateState(value: unknown): asserts value is FitnessState {
 
 export function parsePersonalState(value: unknown): FitnessState {
   validateState(value)
-  return migrateExerciseSetsInState(structuredClone(value))
+  return migrateMuscleMetadataInState(migrateExerciseSetsInState(structuredClone(value)))
 }
 
 export function createPersonalBackup(state: FitnessState, exportedAt = new Date().toISOString()): PersonalBackup {
@@ -154,7 +155,7 @@ export function parsePersonalBackup(raw: string): PersonalBackup {
     recordCounts?: PersonalBackupCounts
     state?: unknown
   }
-  if (candidate.backupSchemaVersion !== 1 && candidate.backupSchemaVersion !== PERSONAL_BACKUP_SCHEMA_VERSION) {
+  if (![1, 2, PERSONAL_BACKUP_SCHEMA_VERSION].includes(candidate.backupSchemaVersion ?? -1)) {
     throw new Error('This backup version is not supported by this app build.')
   }
   if (candidate.sourceMode !== 'personal') throw new Error('Only Personal workspace backups can be restored here.')
@@ -178,7 +179,7 @@ export function parsePersonalBackup(raw: string): PersonalBackup {
 
 export function serializeLegacyPersonalBackup(state: unknown, exportedAt = new Date().toISOString()) {
   validateState(state)
-  const normalized = migrateExerciseSetsInState(structuredClone(state))
+  const normalized = migrateMuscleMetadataInState(migrateExerciseSetsInState(structuredClone(state)))
   return JSON.stringify({
     backupSchemaVersion: 1,
     sourceMode: 'personal',

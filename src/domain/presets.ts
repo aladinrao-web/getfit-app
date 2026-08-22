@@ -1,4 +1,5 @@
 import type { Exercise, ExerciseProgression, FitnessState, FoodReference, MealPreset, Profile } from './types'
+import { normalizeExerciseMuscles } from './muscles'
 
 export const PERSONAL_PRESET_SCHEMA_VERSION = 1
 
@@ -44,7 +45,7 @@ export function applyPersonalPresetBundle(state: FitnessState, bundle: PersonalP
     profile: { ...bundle.profile },
     mealPresets: bundle.mealPresets.map((preset) => ({ ...preset, slots: preset.slots.map((slot) => ({ ...slot })) })),
     foodLibrary: bundle.foodLibrary.map((item) => ({ ...item })),
-    exercises: bundle.exercises.map((exercise) => ({ ...exercise, targetReps: [...exercise.targetReps] })),
+    exercises: bundle.exercises.map((exercise) => normalizeExerciseMuscles({ ...exercise, targetReps: [...exercise.targetReps] })),
     progressionBaselines: bundle.progressions.map((progression) => ({ ...progression })),
     progressions: bundle.progressions.map((progression) => ({ ...progression })),
   }

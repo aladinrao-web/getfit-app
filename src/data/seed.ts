@@ -62,18 +62,18 @@ export const syntheticFoodLibrary: FoodReference[] = [
 ]
 
 export const syntheticExercises: Exercise[] = [
-  { id: 'incline-press', workout: 'A', order: 1, name: 'Incline DB Press', targetReps: [12, 12, 12], warmup: '7.5 kg × 10, then 10 kg × 5', coachingCue: 'Stable wrists; drive through the chest.' },
-  { id: 'pec-deck', workout: 'A', order: 2, name: 'Pec Deck', targetReps: [13, 13, 13], warmup: '25 kg × 10', coachingCue: 'Shoulder blades back; controlled stretch.' },
-  { id: 'lateral-raise', workout: 'A', order: 3, name: 'DB Lateral Raise', targetReps: [12, 12, 20], warmup: 'One light set', coachingCue: 'No swinging; stop around shoulder height.' },
-  { id: 'cable-fly', workout: 'A', order: 4, name: 'Cable Fly', targetReps: [12, 12, 12], warmup: 'Light stack × 12', coachingCue: 'Soft elbows; bring biceps toward each other.' },
-  { id: 'shoulder-press', workout: 'B', order: 1, name: 'DB Shoulder Press', targetReps: [9, 9, 9], warmup: '7.5 kg × 10, then 10 kg × 5', coachingCue: 'Keep the right wrist stacked and stable.' },
-  { id: 'leg-extension', workout: 'B', order: 2, name: 'Leg Extension', targetReps: [15, 15, 15], warmup: 'Adjust shin pad before loading', coachingCue: 'Stop if the pad causes discomfort.' },
-  { id: 'rdl', workout: 'B', order: 3, name: 'Romanian Deadlift', targetReps: [10, 10, 10], warmup: '5 kg each × 10', coachingCue: 'Soft knees; hips back; weights close.' },
-  { id: 'triceps', workout: 'B', order: 4, name: 'Cable Triceps Pushdown', targetReps: [12, 12, 12], warmup: 'One light set', coachingCue: 'Elbows pinned; no torso swing.' },
-  { id: 'pulldown', workout: 'C', order: 1, name: 'Lat Pulldown', targetReps: [10, 10, 10], warmup: '25 kg × 10', coachingCue: 'Do before rows; pull elbows toward ribs.' },
-  { id: 'supported-row', workout: 'C', order: 2, name: 'Chest-Supported Row', targetReps: [12, 12, 12], warmup: 'Light set × 10', coachingCue: 'No shrugging; keep the full range.' },
-  { id: 'one-arm-row', workout: 'C', order: 3, name: 'One-Arm DB Row', targetReps: [15, 15, 15], warmup: '7.5 kg × 10', coachingCue: 'Pull toward the hip to bias the lats.' },
-  { id: 'biceps', workout: 'C', order: 4, name: 'DB Bicep Curl', targetReps: [12, 12, 12], warmup: 'One light set', coachingCue: 'Strict top set; controlled back-offs.' },
+  { id: 'incline-press', workout: 'A', order: 1, name: 'Incline DB Press', primaryMuscle: 'chest', secondaryMuscles: ['front-shoulders', 'triceps'], targetReps: [12, 12, 12], warmup: '7.5 kg × 10, then 10 kg × 5', coachingCue: 'Stable wrists; drive through the chest.' },
+  { id: 'pec-deck', workout: 'A', order: 2, name: 'Pec Deck', primaryMuscle: 'chest', secondaryMuscles: [], targetReps: [13, 13, 13], warmup: '25 kg × 10', coachingCue: 'Shoulder blades back; controlled stretch.' },
+  { id: 'lateral-raise', workout: 'A', order: 3, name: 'DB Lateral Raise', primaryMuscle: 'side-shoulders', secondaryMuscles: [], targetReps: [12, 12, 20], warmup: 'One light set', coachingCue: 'No swinging; stop around shoulder height.' },
+  { id: 'cable-fly', workout: 'A', order: 4, name: 'Cable Fly', primaryMuscle: 'chest', secondaryMuscles: [], targetReps: [12, 12, 12], warmup: 'Light stack × 12', coachingCue: 'Soft elbows; bring biceps toward each other.' },
+  { id: 'shoulder-press', workout: 'B', order: 1, name: 'DB Shoulder Press', primaryMuscle: 'front-shoulders', secondaryMuscles: ['side-shoulders', 'triceps'], targetReps: [9, 9, 9], warmup: '7.5 kg × 10, then 10 kg × 5', coachingCue: 'Keep the right wrist stacked and stable.' },
+  { id: 'leg-extension', workout: 'B', order: 2, name: 'Leg Extension', primaryMuscle: 'quads', secondaryMuscles: [], targetReps: [15, 15, 15], warmup: 'Adjust shin pad before loading', coachingCue: 'Stop if the pad causes discomfort.' },
+  { id: 'rdl', workout: 'B', order: 3, name: 'Romanian Deadlift', primaryMuscle: 'hamstrings', secondaryMuscles: ['glutes'], targetReps: [10, 10, 10], warmup: '5 kg each × 10', coachingCue: 'Soft knees; hips back; weights close.' },
+  { id: 'triceps', workout: 'B', order: 4, name: 'Cable Triceps Pushdown', primaryMuscle: 'triceps', secondaryMuscles: [], targetReps: [12, 12, 12], warmup: 'One light set', coachingCue: 'Elbows pinned; no torso swing.' },
+  { id: 'pulldown', workout: 'C', order: 1, name: 'Lat Pulldown', primaryMuscle: 'back-lats', secondaryMuscles: ['biceps'], targetReps: [10, 10, 10], warmup: '25 kg × 10', coachingCue: 'Do before rows; pull elbows toward ribs.' },
+  { id: 'supported-row', workout: 'C', order: 2, name: 'Chest-Supported Row', primaryMuscle: 'upper-back', secondaryMuscles: ['back-lats', 'rear-shoulders', 'biceps'], targetReps: [12, 12, 12], warmup: 'Light set × 10', coachingCue: 'No shrugging; keep the full range.' },
+  { id: 'one-arm-row', workout: 'C', order: 3, name: 'One-Arm DB Row', primaryMuscle: 'back-lats', secondaryMuscles: ['upper-back', 'rear-shoulders', 'biceps'], targetReps: [15, 15, 15], warmup: '7.5 kg × 10', coachingCue: 'Pull toward the hip to bias the lats.' },
+  { id: 'biceps', workout: 'C', order: 4, name: 'DB Bicep Curl', primaryMuscle: 'biceps', secondaryMuscles: [], targetReps: [12, 12, 12], warmup: 'One light set', coachingCue: 'Strict top set; controlled back-offs.' },
 ]
 
 const progressionSeed: Array<[string, number, string, string, string, ProgressionDecision, string, number]> = [

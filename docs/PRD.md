@@ -405,6 +405,20 @@ It's done when:
 - The Sheet remains a read-only archive unless the user later chooses a separate ChatGPT-assisted update.
 - App exports are versioned snapshots; the app does not automatically write to or synchronize with Google Sheets.
 
+### US-15 — Adjust exercises for today's workout
+
+**As the primary user, I want to adjust the current session without rewriting the default A/B/C plans so that I can respond to availability or coverage needs while keeping the routine stable.**
+
+It's done when:
+
+- The active workout exposes a secondary exercise-adjustment action.
+- The user can add an unused exercise from any theme, reorder the current session, or remove an exercise while retaining at least one.
+- Replacement choices use unused exercises with the same primary muscle.
+- An added or replacement exercise starts with its own current progression weight, target reps, and progression decision.
+- Removing or replacing an exercise with entered reps requires confirmation.
+- The completed workout stores the exercises actually performed and updates their own progression and muscle coverage.
+- Closing, discarding, or completing the session does not change the saved A/B/C exercise assignments.
+
 ## 10. Functional requirements
 
 | ID | Priority | Requirement | Verification |
@@ -432,9 +446,21 @@ It's done when:
 | FR-WKO-07 | P0 | Completion shall upsert by stable session ID and be idempotent. | Unit + integration |
 | FR-WKO-08 | P0 | Completion shall exclude skipped and unreported exercises. | Unit |
 | FR-WKO-09 | P0 | Discard shall require confirmation and leave committed records unchanged. | E2E |
+| FR-WKO-10 | P0 | The active workout shall allow the user to add, remove, reorder, or same-primary-muscle replace exercises for the current session. | Unit + responsive UI |
+| FR-WKO-11 | P0 | A draft adjustment shall prevent duplicate exercise IDs and shall retain at least one exercise. | Unit |
+| FR-WKO-12 | P0 | Removing or replacing an exercise with entered reps shall require confirmation before clearing its draft result. | UI + E2E |
+| FR-WKO-13 | P0 | Added and replacement exercises shall initialize from their own target reps, current progression weight, and progression decision. | Unit |
+| FR-WKO-14 | P0 | Session adjustments shall never mutate saved A/B/C assignments; completion shall store and progress the exercises actually performed. | Unit + integration |
 | FR-PRG-01 | P0 | Only committed exercises shall update matching progression records. | Unit |
 | FR-PRG-02 | P0 | The four allowed progression decisions shall have deterministic effects. | Unit |
 | FR-PRG-03 | P0 | Explicit user decisions shall not be overwritten by automatic rules. | Unit |
+| FR-MUS-01 | P0 | Every exercise shall identify one primary muscle group and zero or more secondary muscle groups. | Unit + migration test |
+| FR-MUS-02 | P0 | Muscle coverage shall use committed sessions from the latest rolling 28 days and compare them with the preceding 28 days. | Unit |
+| FR-MUS-03 | P0 | Coverage shall count each completed primary-muscle set as 1.0 effective set and each secondary-muscle set as 0.5 effective sets. | Unit |
+| FR-MUS-04 | P0 | One workout shall count as a meaningful muscle exposure when it contains at least 2 effective sets for that muscle. | Unit |
+| FR-MUS-05 | P0 | The Progress screen shall show effective sets, exposures, prior-period change, weekly target band, status, contributing exercises, and available primary exercises for every supported muscle group. | UI + responsive review |
+| FR-MUS-06 | P0 | The Home focus shall prioritize consistency before frequency, completed workload, muscle coverage, body-weight response, and progression. | Unit + UI |
+| FR-MUS-07 | P0 | Muscle coverage guidance shall recommend actions only and shall never change the fixed A, B, or C workout plan automatically. | Unit + product review |
 | FR-HIS-01 | P0 | History shall show committed sessions in reverse chronological order. | Unit + UI |
 | FR-HIS-02 | P0 | The app shall provide a deliberate correction path with impact preview. | Integration + E2E |
 | FR-HIS-03 | P0 | Editing or deleting a committed workout shall preserve its stable identity where applicable, save a recoverable pre-change copy, and recompute only affected exercise progression. | Unit + integration |
@@ -479,8 +505,9 @@ It's done when:
 
 - **Profile:** goals, gain band, progression/nutrition rules, allergen note, timezone.
 - **Weight/check-in:** stable ID, calendar date, optional weight, partial preset adherence, exceptions, updated timestamp, and optional completion timestamp.
-- **Exercise:** workout code, order, target reps, warm-up, coaching cue.
+- **Exercise:** workout code, order, target reps, warm-up, coaching cue, one primary muscle group, and zero or more secondary muscle groups.
 - **Exercise progression:** working load, last result, next target, limiter, decision, notes, increment.
+- **Muscle coverage:** derived 28-day effective sets, meaningful exposures, target status, prior-period comparison, and contributing exercises. It is calculated from committed sessions rather than stored separately.
 - **Workout draft:** stable session ID, date, workout code, mutable exercise results, notes.
 - **Workout session:** committed version of completed exercise results and completion timestamp.
 - **Mode metadata:** Personal or Demo, schema version, created/updated timestamps.
@@ -503,10 +530,12 @@ It's done when:
 12. A repeated sync operation cannot create a duplicate committed record.
 13. The Sheet and the app are never simultaneously treated as editable sources of truth.
 14. Sheet-ready exports are immutable snapshots, not synchronization instructions.
-15. Restore replaces Personal state only after a pre-import backup succeeds.
-16. An unanswered meal is not equivalent to a skipped meal.
-17. Check-in completion requires an explicit answer for every planned meal.
-18. Partial check-ins may update weight trends but do not count toward completed nutrition summaries.
+15. Muscle guidance never changes the A, B, or C exercise plan without explicit user action.
+16. A current-session exercise override never changes the saved A, B, or C exercise assignments.
+17. Restore replaces Personal state only after a pre-import backup succeeds.
+18. An unanswered meal is not equivalent to a skipped meal.
+19. Check-in completion requires an explicit answer for every planned meal.
+20. Partial check-ins may update weight trends but do not count toward completed nutrition summaries.
 
 ## 12. Non-functional requirements
 
@@ -758,6 +787,8 @@ A requirement or story is done when:
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 1.3 | 2026-08-22 | Added current-session exercise adjustments while preserving fixed A/B/C plans and exercise-specific progression. |
+| 1.2 | 2026-08-22 | Added rolling 28-day muscle coverage, effective-set targets, and prioritized training guidance. |
 | 1.1 | 2026-08-09 | Implemented the portable Personal snapshot package with restorable JSON, Sheet-ready CSV files, and a reconciliation manifest. |
 | 1.0 | 2026-08-09 | Approved public repository visibility and GitHub Pages as the production PWA host after the privacy, secret, and signup gates passed. |
 | 0.9 | 2026-08-09 | Added the production sign-in-only boundary, repository-subpath PWA requirements, and the proposed GitHub Pages target with its visibility gate. |

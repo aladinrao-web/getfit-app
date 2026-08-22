@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { AlertCircle, ArrowLeft, Check, ChevronDown, Clock3, Dumbbell, Flag, Pencil, RotateCcw, Save, Trash2, X } from 'lucide-react'
+import { AlertCircle, ArrowDown, ArrowLeft, ArrowUp, Check, ChevronDown, Clock3, Dumbbell, Flag, ListPlus, Pencil, Plus, RefreshCcw, RotateCcw, Save, Trash2, X } from 'lucide-react'
 import { formatLongDate, formatShortDate } from '../domain/calculations'
 import { correctWorkoutSession, formatExerciseResult, getNextWorkoutCode } from '../domain/workout'
 import type { ExerciseResult, ProgressionDecision, WorkoutCode, WorkoutSession } from '../domain/types'
 import { hasCompletedExerciseSet, hasIncompleteStartedSet } from '../domain/exerciseSets'
+import { muscleLabel } from '../domain/muscles'
 import { useFitness } from '../store/FitnessContext'
 import { Button, Card, Field, PageHeader, SectionHeading, StatusPill } from '../components/ui'
 
@@ -89,6 +90,7 @@ export function TrainScreen() {
 function ActiveWorkout({ onCompleted }: { onCompleted: () => void }) {
   const { state, updateDraftResult, updateDraftNotes, discardDraft, completeWorkout } = useFitness()
   const [reviewing, setReviewing] = useState(false)
+  const [adjustingExercises, setAdjustingExercises] = useState(false)
   const draft = state.draftWorkout!
   const completed = draft.results.filter((result) => !result.skipped && hasCompletedExerciseSet(result))
   const hasIncompleteSets = draft.results.some((result) => !result.skipped && hasIncompleteStartedSet(result))
@@ -117,7 +119,11 @@ function ActiveWorkout({ onCompleted }: { onCompleted: () => void }) {
         <div className="active-workout-actions"><span><Clock3 size={17} />In progress</span><Button variant="ghost" onClick={handleDiscard}><X size={18} />Discard</Button></div>
       </div>
 
-      <div className="draft-notice"><AlertCircle size={18} /><span>Nothing updates your history or progression until you finish and confirm.</span></div>
+      <div className="draft-notice workout-adjust-notice">
+        <AlertCircle size={18} />
+        <span>Nothing updates your history or progression until you finish and confirm.</span>
+        <Button variant="ghost" className="compact-adjust-button" onClick={() => setAdjustingExercises(true)}><ListPlus size={16} />Adjust exercises</Button>
+      </div>
 
       <div className="active-exercise-list">
         {draft.results.map((result, exerciseIndex) => {
@@ -174,6 +180,101 @@ function ActiveWorkout({ onCompleted }: { onCompleted: () => void }) {
           </Card>
         </div>
       )}
+
+      {adjustingExercises && <ExerciseEditor onClose={() => setAdjustingExercises(false)} />}
+    </div>
+  )
+}
+
+type ExercisePicker = { type: 'add' } | { type: 'replace'; exerciseId: string }
+
+function ExerciseEditor({ onClose }: { onClose: () => void }) {
+  const { state, addDraftExercise, replaceDraftExercise, removeDraftExercise, moveDraftExercise } = useFitness()
+  const [picker, setPicker] = useState<ExercisePicker | null>(null)
+  const draft = state.draftWorkout!
+  const currentIds = new Set(draft.results.map((result) => result.exerciseId))
+  const replacingExercise = picker?.type === 'replace'
+    ? state.exercises.find((exercise) => exercise.id === picker.exerciseId)
+    : undefined
+  const candidates = state.exercises
+    .filter((exercise) => !currentIds.has(exercise.id))
+    .filter((exercise) => !replacingExercise || exercise.primaryMuscle === replacingExercise.primaryMuscle)
+    .sort((left, right) => Number(right.workout === draft.workout) - Number(left.workout === draft.workout)
+      || muscleLabel(left.primaryMuscle).localeCompare(muscleLabel(right.primaryMuscle))
+      || left.order - right.order)
+
+  function hasEnteredReps(exerciseId: string) {
+    return draft.results.find((result) => result.exerciseId === exerciseId)?.sets.some((set) => set.reps !== null) ?? false
+  }
+
+  function handleRemove(exerciseId: string, exerciseName: string) {
+    if (hasEnteredReps(exerciseId) && !window.confirm(`Remove ${exerciseName}? Its entered reps in this draft will be cleared.`)) return
+    removeDraftExercise(exerciseId)
+  }
+
+  function chooseExercise(exerciseId: string) {
+    if (!picker) return
+    if (picker.type === 'add') addDraftExercise(exerciseId)
+    else {
+      const exerciseName = state.exercises.find((exercise) => exercise.id === picker.exerciseId)?.name ?? 'this exercise'
+      if (hasEnteredReps(picker.exerciseId) && !window.confirm(`Replace ${exerciseName}? Its entered reps in this draft will be cleared.`)) return
+      replaceDraftExercise(picker.exerciseId, exerciseId)
+    }
+    setPicker(null)
+  }
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Adjust workout exercises">
+      <Card className="review-modal exercise-editor-modal">
+        <div className="modal-head">
+          <div><p className="eyebrow">Workout {draft.workout} override</p><h2>Adjust exercises</h2><p>Changes apply only to this workout.</p></div>
+          <button className="icon-button" onClick={onClose} aria-label="Close exercise editor"><X size={21} /></button>
+        </div>
+
+        {!picker && <>
+          <div className="draft-exercise-editor-list">
+            {draft.results.map((result, index) => {
+              const exercise = state.exercises.find((item) => item.id === result.exerciseId)!
+              const replacements = state.exercises.filter((item) => item.id !== exercise.id && !currentIds.has(item.id) && item.primaryMuscle === exercise.primaryMuscle)
+              return (
+                <div className="draft-exercise-editor-row" key={result.exerciseId}>
+                  <span className="exercise-index">{String(index + 1).padStart(2, '0')}</span>
+                  <div className="draft-exercise-editor-copy"><strong>{exercise.name}</strong><span>{muscleLabel(exercise.primaryMuscle)} · {exercise.targetReps.length} sets</span></div>
+                  <div className="draft-exercise-editor-actions">
+                    <button className="mini-icon-button" disabled={index === 0} onClick={() => moveDraftExercise(exercise.id, -1)} aria-label={`Move ${exercise.name} up`}><ArrowUp size={15} /></button>
+                    <button className="mini-icon-button" disabled={index === draft.results.length - 1} onClick={() => moveDraftExercise(exercise.id, 1)} aria-label={`Move ${exercise.name} down`}><ArrowDown size={15} /></button>
+                    <button className="mini-text-button" disabled={!replacements.length} onClick={() => setPicker({ type: 'replace', exerciseId: exercise.id })}><RefreshCcw size={14} />Replace</button>
+                    <button className="mini-icon-button danger" disabled={draft.results.length === 1} onClick={() => handleRemove(exercise.id, exercise.name)} aria-label={`Remove ${exercise.name}`}><Trash2 size={15} /></button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="exercise-editor-footer">
+            <Button variant="secondary" disabled={!candidates.length} onClick={() => setPicker({ type: 'add' })}><Plus size={17} />Add exercise</Button>
+            <Button onClick={onClose}>Done</Button>
+          </div>
+        </>}
+
+        {picker && <div className="exercise-picker">
+          <button className="picker-back" onClick={() => setPicker(null)}><ArrowLeft size={16} />Back to workout</button>
+          <div className="exercise-picker-heading">
+            <h3>{picker.type === 'add' ? 'Add an exercise' : `Replace ${replacingExercise?.name}`}</h3>
+            <p>{picker.type === 'add' ? 'Choose any unused library exercise. Cross-theme additions are allowed.' : `Only unused ${muscleLabel(replacingExercise!.primaryMuscle)} exercises are shown.`}</p>
+          </div>
+          <div className="exercise-picker-list">
+            {candidates.map((exercise) => {
+              const progression = state.progressions.find((item) => item.exerciseId === exercise.id)
+              return <button className="exercise-picker-option" onClick={() => chooseExercise(exercise.id)} key={exercise.id}>
+                <span className="workout-letter tiny">{exercise.workout}</span>
+                <span><strong>{exercise.name}</strong><small>Primary: {muscleLabel(exercise.primaryMuscle)}{exercise.secondaryMuscles.length ? ` · Secondary: ${exercise.secondaryMuscles.map(muscleLabel).join(', ')}` : ''}</small></span>
+                <span><strong>{progression?.currentWeightKg ?? 0} kg</strong><small>{exercise.targetReps.join(' / ')} reps</small></span>
+              </button>
+            })}
+            {!candidates.length && <div className="exercise-picker-empty">No unused matching exercise is available in the current library.</div>}
+          </div>
+        </div>}
+      </Card>
     </div>
   )
 }

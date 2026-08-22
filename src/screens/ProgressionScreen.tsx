@@ -1,14 +1,18 @@
 import { useState } from 'react'
-import { ArrowUpRight, Dumbbell, Focus, Gauge, Target } from 'lucide-react'
+import { ArrowUpRight, ChevronDown, Dumbbell, Focus, Gauge, Layers3, Target } from 'lucide-react'
 import type { WorkoutCode } from '../domain/types'
 import { useFitness } from '../store/FitnessContext'
-import { Card, PageHeader, SectionHeading, StatusPill } from '../components/ui'
+import { Card, PageHeader, ProgressBar, SectionHeading, StatusPill } from '../components/ui'
+import { getHomeFocus, getMuscleCoverage } from '../domain/muscleCoverage'
 
 type Filter = 'All' | WorkoutCode
 
 export function ProgressionScreen() {
-  const { state } = useFitness()
+  const { state, today } = useFitness()
   const [filter, setFilter] = useState<Filter>('All')
+  const coverage = getMuscleCoverage(state, today)
+  const focus = getHomeFocus(state, today, coverage)
+  const onTargetCount = coverage.muscles.filter((muscle) => muscle.status === 'On target').length
   const visible = state.progressions.filter((progression) => {
     const exercise = state.exercises.find((item) => item.id === progression.exerciseId)
     return filter === 'All' || exercise?.workout === filter
@@ -21,8 +25,47 @@ export function ProgressionScreen() {
 
   return (
     <div className="page progression-page">
-      <PageHeader eyebrow="Current exercise state" title="Progression" detail="The next useful step—not simply more weight." />
+      <PageHeader eyebrow="Current exercise state" title="Progress" detail="See your 28-day muscle coverage, then act on the next useful step." />
 
+      <Card className={`coverage-focus-card focus-${focus.kind}`}>
+        <div className="icon-tile lime"><Layers3 size={21} /></div>
+        <div><p className="eyebrow">{focus.eyebrow}</p><h2>{focus.title}</h2><p>{focus.detail}</p></div>
+        <div className="coverage-focus-stats">
+          <strong>{coverage.sessionCount}<small> / {coverage.sessionGoal}</small></strong>
+          <span>workouts in 28 days</span>
+          <b>{onTargetCount} muscle group{onTargetCount === 1 ? '' : 's'} on target</b>
+        </div>
+      </Card>
+
+      <SectionHeading title="Muscle coverage" action={<span className="muted-label">Primary sets 1× · secondary 0.5×</span>} />
+      <div className="muscle-coverage-grid">
+        {coverage.muscles.map((muscle) => {
+          const change = muscle.effectiveSets - muscle.previousEffectiveSets
+          const available = state.exercises.filter((exercise) => exercise.primaryMuscle === muscle.muscle)
+          return (
+            <Card className="muscle-coverage-card" key={muscle.muscle}>
+              <div className="muscle-card-head"><div><h3>{muscle.label}</h3><span>{muscle.weeklyMin}–{muscle.weeklyMax} effective sets/week</span></div><StatusPill status={muscle.status} /></div>
+              <div className="muscle-set-total"><strong>{muscle.effectiveSets % 1 ? muscle.effectiveSets.toFixed(1) : muscle.effectiveSets}</strong><span>of {muscle.targetMin}–{muscle.targetMax} sets over 28 days</span></div>
+              <ProgressBar value={muscle.effectiveSets} max={muscle.targetMin} label={`${muscle.label} minimum coverage`} />
+              <div className="muscle-card-meta">
+                <span><strong>{muscle.exposures}</strong> meaningful exposures</span>
+                <span className={change > 0 ? 'coverage-up' : change < 0 ? 'coverage-down' : ''}>{change > 0 ? '+' : ''}{change % 1 ? change.toFixed(1) : change} sets vs prior 28 days</span>
+              </div>
+              <details className="muscle-details">
+                <summary>Exercise breakdown <ChevronDown size={15} /></summary>
+                <div>
+                  {muscle.exercises.length
+                    ? muscle.exercises.map((exercise) => <p key={exercise.exerciseId}><span>{exercise.exerciseName}<small>{exercise.role}</small></span><strong>{exercise.effectiveSets % 1 ? exercise.effectiveSets.toFixed(1) : exercise.effectiveSets}</strong></p>)
+                    : <p className="muscle-empty">No completed sets in this period.</p>}
+                  <div className="available-exercises"><span>Available primary exercises</span><strong>{available.length ? available.map((exercise) => exercise.name).join(' · ') : 'None in the current library'}</strong></div>
+                </div>
+              </details>
+            </Card>
+          )
+        })}
+      </div>
+
+      <SectionHeading title="Exercise progression" action={<span className="muted-label">Weight, reps and technique</span>} />
       <div className="progress-summary-grid">
         <Card><div className="icon-tile lime"><ArrowUpRight size={21} /></div><strong>{counts.Increase}</strong><span>Ready to increase</span></Card>
         <Card><div className="icon-tile cream"><Gauge size={21} /></div><strong>{counts.Repeat}</strong><span>Building clean reps</span></Card>

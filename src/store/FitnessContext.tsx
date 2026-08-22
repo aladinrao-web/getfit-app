@@ -5,7 +5,7 @@ import { createPersonalBackup, serializePersonalBackup, type PersonalBackup } fr
 import { formatDateInTimeZone } from '../domain/date'
 import { createRecordId } from '../domain/ids'
 import { applyPersonalPresetBundle, type PersonalPresetBundle } from '../domain/presets'
-import { applyWorkoutCompletion, correctWorkoutSession, deleteWorkoutSession, startWorkoutDraft } from '../domain/workout'
+import { addDraftExercise as addExerciseToDraft, applyWorkoutCompletion, correctWorkoutSession, deleteWorkoutSession, moveDraftExercise as moveExerciseInDraft, removeDraftExercise as removeExerciseFromDraft, replaceDraftExercise as replaceExerciseInDraft, startWorkoutDraft } from '../domain/workout'
 import type { AppMode, DailyCheckIn, ExerciseResult, FitnessState, Profile, WorkoutCode, WorkoutSession } from '../domain/types'
 import { loadActiveMode, loadModeState, normalizeState, resetModeState, saveActiveMode, saveModeState, savePreChangeBackup } from './persistence'
 
@@ -20,6 +20,10 @@ interface FitnessContextValue {
   startWorkout: (code: WorkoutCode) => void
   updateDraftResult: (exerciseId: string, patch: Partial<ExerciseResult>) => void
   updateDraftNotes: (notes: string) => void
+  addDraftExercise: (exerciseId: string) => void
+  replaceDraftExercise: (currentExerciseId: string, nextExerciseId: string) => void
+  removeDraftExercise: (exerciseId: string) => void
+  moveDraftExercise: (exerciseId: string, direction: -1 | 1) => void
   discardDraft: () => void
   completeWorkout: () => void
   correctWorkout: (session: WorkoutSession) => void
@@ -146,6 +150,30 @@ export function FitnessProvider({ children }: { children: ReactNode }) {
       setWorkspace((current) => current.state.draftWorkout ? {
         ...current,
         state: { ...current.state, draftWorkout: { ...current.state.draftWorkout, sessionNotes: notes } },
+      } : current)
+    },
+    addDraftExercise(exerciseId) {
+      setWorkspace((current) => current.state.draftWorkout ? {
+        ...current,
+        state: { ...current.state, draftWorkout: addExerciseToDraft(current.state, current.state.draftWorkout, exerciseId) },
+      } : current)
+    },
+    replaceDraftExercise(currentExerciseId, nextExerciseId) {
+      setWorkspace((current) => current.state.draftWorkout ? {
+        ...current,
+        state: { ...current.state, draftWorkout: replaceExerciseInDraft(current.state, current.state.draftWorkout, currentExerciseId, nextExerciseId) },
+      } : current)
+    },
+    removeDraftExercise(exerciseId) {
+      setWorkspace((current) => current.state.draftWorkout ? {
+        ...current,
+        state: { ...current.state, draftWorkout: removeExerciseFromDraft(current.state.draftWorkout, exerciseId) },
+      } : current)
+    },
+    moveDraftExercise(exerciseId, direction) {
+      setWorkspace((current) => current.state.draftWorkout ? {
+        ...current,
+        state: { ...current.state, draftWorkout: moveExerciseInDraft(current.state.draftWorkout, exerciseId, direction) },
       } : current)
     },
     discardDraft() {

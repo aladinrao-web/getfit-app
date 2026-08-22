@@ -3,6 +3,7 @@ import type { AppView } from '../App'
 import { calculateMealTotals, formatLongDate, getFourteenDayNutrition, getPresetForDate, getWeightSummary, proteinTargets } from '../domain/calculations'
 import { getAnsweredMealCount, hasCheckInProgress } from '../domain/checkIn'
 import { getNextWorkoutCode } from '../domain/workout'
+import { getHomeFocus, getMuscleCoverage } from '../domain/muscleCoverage'
 import { useFitness } from '../store/FitnessContext'
 import { Button, Card, Metric, PageHeader, ProgressBar, SectionHeading, StatusPill } from '../components/ui'
 
@@ -24,6 +25,8 @@ export function DashboardScreen({ navigate }: { navigate: (view: AppView) => voi
   const progressRange = state.profile.goalWeightKg - state.profile.startingWeightKg
   const progressPercent = displayedAverage === null || progressRange <= 0 ? 0 : (displayedAverage - state.profile.startingWeightKg) / progressRange
   const attention = state.progressions.filter((item) => item.decision !== 'Repeat').slice(0, 3)
+  const muscleCoverage = getMuscleCoverage(state, today)
+  const homeFocus = getHomeFocus(state, today, muscleCoverage)
 
   function beginWorkout() {
     if (!hasWorkoutDraft) startWorkout(displayedWorkout)
@@ -100,7 +103,7 @@ export function DashboardScreen({ navigate }: { navigate: (view: AppView) => voi
 
       <Card className="weekly-strip">
         <div className="weekly-icon"><Flame size={24} /></div>
-        <div><p className="eyebrow">This week’s focus</p><h3>Quality reps before heavier reps</h3><p>{attention.length ? `${attention.length} exercise${attention.length === 1 ? '' : 's'} need technique or load attention. Keep the next sessions deliberate.` : 'Log your first completed session to establish the next targets.'}</p></div>
+        <div><p className="eyebrow">{homeFocus.eyebrow}</p><h3>{homeFocus.title}</h3><p>{homeFocus.detail}</p></div>
         <button className="round-arrow" onClick={() => navigate('progression')} aria-label="See progression"><ArrowRight size={20} /></button>
       </Card>
     </div>

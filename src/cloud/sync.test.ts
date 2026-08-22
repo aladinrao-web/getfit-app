@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createPersonalState } from '../data/seed'
 import {
   decideSync,
+  isFitnessSnapshotConflict,
   loadCloudSyncMetadata,
   planConflictResolution,
   saveCloudSyncMetadata,
@@ -23,6 +24,20 @@ const metadata: CloudSyncMetadata = {
 }
 
 describe('cloud reconciliation', () => {
+  it('recognizes the named application conflict returned with P0001', () => {
+    expect(isFitnessSnapshotConflict({
+      code: 'P0001',
+      message: 'fitness_snapshot_conflict',
+    })).toBe(true)
+  })
+
+  it('does not treat SQLSTATE 40001 alone as an application conflict', () => {
+    expect(isFitnessSnapshotConflict({
+      code: '40001',
+      message: 'could not serialize access due to concurrent update',
+    })).toBe(false)
+  })
+
   it('seeds an empty cloud from the local Personal workspace', () => {
     expect(decideSync(null, null, 'local')).toBe('create-cloud')
   })

@@ -53,4 +53,28 @@ describe('Personal backup', () => {
     expect(parsed.backupSchemaVersion).toBe(PERSONAL_BACKUP_SCHEMA_VERSION)
     expect(parsed.state.workouts[0].results[0].sets).toEqual(state.workouts[0].results[0].sets)
   })
+
+  it('restores a version-two backup by adding exercise muscle metadata', () => {
+    const state = createPersonalState()
+    const legacyState = structuredClone(state) as unknown as Record<string, unknown>
+    const exercises = legacyState.exercises as Array<Record<string, unknown>>
+    exercises.forEach((exercise) => {
+      delete exercise.primaryMuscle
+      delete exercise.secondaryMuscles
+    })
+
+    const parsed = parsePersonalBackup(JSON.stringify({
+      backupSchemaVersion: 2,
+      sourceMode: 'personal',
+      exportedAt: '2026-08-08T12:00:00.000Z',
+      recordCounts: createPersonalBackup(state).recordCounts,
+      state: legacyState,
+    }))
+
+    expect(parsed.backupSchemaVersion).toBe(PERSONAL_BACKUP_SCHEMA_VERSION)
+    expect(parsed.state.exercises.find((exercise) => exercise.id === 'incline-press')).toMatchObject({
+      primaryMuscle: 'chest',
+      secondaryMuscles: ['front-shoulders', 'triceps'],
+    })
+  })
 })

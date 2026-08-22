@@ -28,6 +28,10 @@ export interface ConflictResolutionPlan {
 
 type StorageAdapter = Pick<Storage, 'getItem' | 'setItem'>
 
+export function isFitnessSnapshotConflict(error: { code?: string; message?: string }) {
+  return error.message?.includes('fitness_snapshot_conflict') ?? false
+}
+
 export function stateHash(state: FitnessState) {
   return JSON.stringify(state)
 }
