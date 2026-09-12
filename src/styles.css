@@ -336,6 +336,8 @@ p { color: var(--muted); line-height: 1.55; }
 .exercise-picker-heading { margin: 18px 0 12px; }
 .exercise-picker-heading h3 { margin-bottom: 4px; }
 .exercise-picker-heading p { margin: 0; font-size: .74rem; }
+.exercise-picker-filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(170px, .55fr); gap: 8px; margin-bottom: 12px; }
+.exercise-picker-filters input, .exercise-picker-filters select { min-width: 0; margin: 0; }
 .exercise-picker-list { display: grid; gap: 7px; }
 .exercise-picker-option { width: 100%; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 11px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #fbfcf9; text-align: left; }
 .exercise-picker-option:hover { border-color: #a8c2b8; background: #f4f8f5; }
@@ -657,6 +659,7 @@ p { color: var(--muted); line-height: 1.55; }
   .exercise-editor-footer { flex-direction: column; }
   .exercise-editor-footer .button { width: 100%; }
   .exercise-picker-option { grid-template-columns: auto minmax(0,1fr); align-items: start; }
+  .exercise-picker-filters { grid-template-columns: 1fr; }
   .exercise-picker-option > span:last-child { grid-column: 2; align-items: flex-start; text-align: left; }
   .review-list > div { align-items: flex-start; }
   .modal-actions { flex-direction: column-reverse; }

@@ -89,8 +89,8 @@ describe('Portable Personal snapshot', () => {
         workoutSessions: 1,
         workoutResults: 1,
         workoutSets: 3,
-        exercises: 12,
-        progressionTargets: 12,
+        exercises: 53,
+        progressionTargets: 53,
         draftWorkout: 0,
       },
     })
@@ -133,7 +133,7 @@ describe('Portable Personal snapshot', () => {
     expect(snapshot.manifest.recordCounts.workoutSets).toBe(0)
     expect(snapshot.files['weights.csv'].trim().split(/\r?\n/)).toHaveLength(1)
     expect(snapshot.files['workouts.csv'].trim().split(/\r?\n/)).toHaveLength(1)
-    expect(snapshot.files['progression.csv'].trim().split(/\r?\n/)).toHaveLength(13)
+    expect(snapshot.files['progression.csv'].trim().split(/\r?\n/)).toHaveLength(54)
   })
 
   it('rejects invalid export timestamps', () => {

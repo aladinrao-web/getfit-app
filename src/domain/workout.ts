@@ -23,7 +23,9 @@ export function getNextWorkoutCode(state: FitnessState): WorkoutCode {
 }
 
 export function startWorkoutDraft(state: FitnessState, code: WorkoutCode, date: string, sessionId = createRecordId('session')): DraftWorkout {
-  const exercises = state.exercises.filter((exercise) => exercise.workout === code).sort((a, b) => a.order - b.order)
+  const exercises = state.exercises
+    .filter((exercise) => exercise.workout === code && exercise.isDefault !== false)
+    .sort((a, b) => a.order - b.order)
   const results = exercises.map((exercise) => draftResultForExercise(state, exercise))
 
   return {

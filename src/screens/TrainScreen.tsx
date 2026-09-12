@@ -3,7 +3,7 @@ import { AlertCircle, ArrowDown, ArrowLeft, ArrowUp, Check, ChevronDown, Clock3,
 import { formatLongDate, formatShortDate } from '../domain/calculations'
 import { correctWorkoutSession, formatExerciseResult, getNextWorkoutCode, hasCompleteWorkingSets, progressionDecisionFor } from '../domain/workout'
 import { formatRepTargets, getNextTargetReps } from '../domain/progression'
-import type { ExerciseResult, WorkoutCode, WorkoutSession } from '../domain/types'
+import type { ExerciseResult, MuscleGroup, WorkoutCode, WorkoutSession } from '../domain/types'
 import { hasIncompleteStartedSet } from '../domain/exerciseSets'
 import { muscleLabel } from '../domain/muscles'
 import { useFitness } from '../store/FitnessContext'
@@ -34,14 +34,14 @@ export function TrainScreen() {
 
       <Card className="train-hero">
         <div className="workout-letter large">{nextWorkout}</div>
-        <div className="train-hero-copy"><p className="eyebrow">Recommended next</p><h2>{workoutNames[nextWorkout]}</h2><p>{state.exercises.filter((exercise) => exercise.workout === nextWorkout).map((exercise) => exercise.name).join(' · ')}</p></div>
+        <div className="train-hero-copy"><p className="eyebrow">Recommended next</p><h2>{workoutNames[nextWorkout]}</h2><p>{state.exercises.filter((exercise) => exercise.workout === nextWorkout && exercise.isDefault !== false).map((exercise) => exercise.name).join(' · ')}</p></div>
         <Button onClick={() => startWorkout(nextWorkout)}><Dumbbell size={18} />Start workout {nextWorkout}</Button>
       </Card>
 
       <SectionHeading title="Workout plans" />
       <div className="workout-plan-grid">
         {(['A', 'B', 'C'] as WorkoutCode[]).map((code) => {
-          const exercises = state.exercises.filter((exercise) => exercise.workout === code).sort((a, b) => a.order - b.order)
+          const exercises = state.exercises.filter((exercise) => exercise.workout === code && exercise.isDefault !== false).sort((a, b) => a.order - b.order)
           return (
             <Card className={code === nextWorkout ? 'workout-plan-card recommended' : 'workout-plan-card'} key={code}>
               <div className="plan-card-head"><span className="workout-letter small">{code}</span>{code === nextWorkout && <span className="recommended-label">Up next</span>}</div>
@@ -193,6 +193,8 @@ type ExercisePicker = { type: 'add' } | { type: 'replace'; exerciseId: string }
 function ExerciseEditor({ onClose }: { onClose: () => void }) {
   const { state, addDraftExercise, replaceDraftExercise, removeDraftExercise, moveDraftExercise } = useFitness()
   const [picker, setPicker] = useState<ExercisePicker | null>(null)
+  const [exerciseQuery, setExerciseQuery] = useState('')
+  const [muscleFilter, setMuscleFilter] = useState<'all' | MuscleGroup>('all')
   const draft = state.draftWorkout!
   const currentIds = new Set(draft.results.map((result) => result.exerciseId))
   const replacingExercise = picker?.type === 'replace'
@@ -204,6 +206,11 @@ function ExerciseEditor({ onClose }: { onClose: () => void }) {
     .sort((left, right) => Number(right.workout === draft.workout) - Number(left.workout === draft.workout)
       || muscleLabel(left.primaryMuscle).localeCompare(muscleLabel(right.primaryMuscle))
       || left.order - right.order)
+  const visibleCandidates = candidates.filter((exercise) => {
+    const query = exerciseQuery.trim().toLowerCase()
+    return (muscleFilter === 'all' || exercise.primaryMuscle === muscleFilter)
+      && (!query || exercise.name.toLowerCase().includes(query) || muscleLabel(exercise.primaryMuscle).toLowerCase().includes(query))
+  })
 
   function hasEnteredReps(exerciseId: string) {
     return draft.results.find((result) => result.exerciseId === exerciseId)?.sets.some((set) => set.reps !== null) ?? false
@@ -253,7 +260,7 @@ function ExerciseEditor({ onClose }: { onClose: () => void }) {
             })}
           </div>
           <div className="exercise-editor-footer">
-            <Button variant="secondary" disabled={!candidates.length} onClick={() => setPicker({ type: 'add' })}><Plus size={17} />Add exercise</Button>
+            <Button variant="secondary" disabled={!candidates.length} onClick={() => { setExerciseQuery(''); setMuscleFilter('all'); setPicker({ type: 'add' }) }}><Plus size={17} />Add exercise</Button>
             <Button onClick={onClose}>Done</Button>
           </div>
         </>}
@@ -264,8 +271,15 @@ function ExerciseEditor({ onClose }: { onClose: () => void }) {
             <h3>{picker.type === 'add' ? 'Add an exercise' : `Replace ${replacingExercise?.name}`}</h3>
             <p>{picker.type === 'add' ? 'Choose any unused library exercise. Cross-theme additions are allowed.' : `Only unused ${muscleLabel(replacingExercise!.primaryMuscle)} exercises are shown.`}</p>
           </div>
+          <div className="exercise-picker-filters">
+            <input aria-label="Search exercises" value={exerciseQuery} onChange={(event) => setExerciseQuery(event.target.value)} placeholder="Search exercises" />
+            {picker.type === 'add' && <select aria-label="Filter exercises by muscle group" value={muscleFilter} onChange={(event) => setMuscleFilter(event.target.value as 'all' | MuscleGroup)}>
+              <option value="all">All muscle groups</option>
+              {['chest', 'front-shoulders', 'side-shoulders', 'rear-shoulders', 'triceps', 'biceps', 'back-lats', 'upper-back', 'quads', 'hamstrings', 'glutes', 'calves', 'core'].map((muscle) => <option key={muscle} value={muscle}>{muscleLabel(muscle as MuscleGroup)}</option>)}
+            </select>}
+          </div>
           <div className="exercise-picker-list">
-            {candidates.map((exercise) => {
+            {visibleCandidates.map((exercise) => {
               const progression = state.progressions.find((item) => item.exerciseId === exercise.id)
               return <button className="exercise-picker-option" onClick={() => chooseExercise(exercise.id)} key={exercise.id}>
                 <span className="workout-letter tiny">{exercise.workout}</span>
@@ -273,7 +287,7 @@ function ExerciseEditor({ onClose }: { onClose: () => void }) {
                 <span><strong>{progression?.currentWeightKg ?? 0} kg</strong><small>{exercise.repRange.min}–{exercise.repRange.max} reps × {exercise.targetReps.length}</small></span>
               </button>
             })}
-            {!candidates.length && <div className="exercise-picker-empty">No unused matching exercise is available in the current library.</div>}
+            {!visibleCandidates.length && <div className="exercise-picker-empty">No unused exercise matches this search or filter.</div>}
           </div>
         </div>}
       </Card>

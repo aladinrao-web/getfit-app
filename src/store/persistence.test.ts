@@ -158,6 +158,32 @@ describe('mode persistence', () => {
     expect(storage.getItem(PRE_CHANGE_BACKUP_KEY)).not.toBeNull()
   })
 
+  it('adds the broad exercise library to a prior Personal workspace without changing completed workouts', () => {
+    const storage = new MemoryStorage()
+    const current = createPersonalState()
+    const draft = startWorkoutDraft(current, 'A', '2026-08-08')
+    draft.results[0].sets = draft.results[0].sets.map((set) => ({ ...set, weightKg: 12.5, reps: 8 }))
+    const completed = applyWorkoutCompletion(current, draft)
+    const legacyExercises = completed.exercises.filter((exercise) => exercise.isDefault !== false)
+    const legacyProgressions = completed.progressions.filter((progression) => legacyExercises.some((exercise) => exercise.id === progression.exerciseId))
+    const legacyState = { ...completed, exercises: legacyExercises, progressions: legacyProgressions, progressionBaselines: legacyProgressions.map((progression) => ({ ...progression })) }
+    storage.setItem(MODE_STORAGE_KEYS.personal, JSON.stringify({
+      schemaVersion: 6,
+      mode: 'personal',
+      createdAt: '2026-08-08T10:00:00.000Z',
+      updatedAt: '2026-08-08T10:00:00.000Z',
+      state: legacyState,
+    }))
+
+    const migrated = loadModeState(storage, 'personal')
+
+    expect(migrated.exercises).toHaveLength(createPersonalState().exercises.length)
+    expect(migrated.exercises.find((exercise) => exercise.id === 'machine-chest-press')).toMatchObject({ isDefault: false, primaryMuscle: 'chest' })
+    expect(migrated.progressions.find((progression) => progression.exerciseId === 'machine-chest-press')).toMatchObject({ currentWeightKg: 0, lastResult: 'No result yet' })
+    expect(migrated.workouts).toEqual(completed.workouts)
+    expect(storage.getItem(PRE_CHANGE_BACKUP_KEY)).not.toBeNull()
+  })
+
   it('migrates legacy progressions to numeric 8-to-12 targets and saves a Personal safety copy', () => {
     const storage = new MemoryStorage()
     const current = createPersonalState()

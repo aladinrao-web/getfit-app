@@ -1,4 +1,4 @@
-import { createPersonalState, createSyntheticState } from '../data/seed'
+import { createPersonalState, createSyntheticState, mergeExerciseLibrary } from '../data/seed'
 import { getSystemTimeZone } from '../domain/date'
 import { canCompleteCheckIn } from '../domain/checkIn'
 import type { AppMode, FitnessState } from '../domain/types'
@@ -8,7 +8,7 @@ import { migrateMuscleMetadataInState } from '../domain/muscles'
 import { migrateProgressionConfiguration } from '../domain/progression'
 import { recomputeProgressions } from '../domain/workout'
 
-export const SCHEMA_VERSION = 6
+export const SCHEMA_VERSION = 7
 export const ACTIVE_MODE_KEY = 'getfit-active-mode-v1'
 export const LEGACY_DEMO_KEY = 'getfit-demo-state-v1'
 export const PRE_CHANGE_BACKUP_KEY = 'getfit-personal-pre-change-backup-v1'
@@ -32,7 +32,7 @@ function initialState(mode: AppMode) {
 }
 
 export function normalizeState(state: FitnessState, mode: AppMode, inferLegacyCompletion = false): FitnessState {
-  const migratedState = migrateProgressionConfiguration(migrateMuscleMetadataInState(migrateExerciseSetsInState(state)))
+  const migratedState = migrateProgressionConfiguration(migrateMuscleMetadataInState(migrateExerciseSetsInState(mergeExerciseLibrary(state))))
   const timezone = migratedState.profile.timezone || (mode === 'demo' ? 'Asia/Calcutta' : getSystemTimeZone())
   const progressionBaselines = migratedState.progressionBaselines?.length
     ? migratedState.progressionBaselines

@@ -62,6 +62,10 @@ export const syntheticFoodLibrary: FoodReference[] = [
   { id: 'powder', name: 'Protein blend', serving: '1 scoop', proteinG: 24, calories: 140, allergenStatus: 'Check current label' },
 ]
 
+function libraryExercise(exercise: Omit<Exercise, 'isDefault'>): Exercise {
+  return { ...exercise, isDefault: false }
+}
+
 export const syntheticExercises: Exercise[] = [
   { id: 'incline-press', workout: 'A', order: 1, name: 'Incline DB Press', primaryMuscle: 'chest', secondaryMuscles: ['front-shoulders', 'triceps'], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: '7.5 kg × 10, then 10 kg × 5', coachingCue: 'Stable wrists; drive through the chest.' },
   { id: 'pec-deck', workout: 'A', order: 2, name: 'Pec Deck', primaryMuscle: 'chest', secondaryMuscles: [], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: '25 kg × 10', coachingCue: 'Shoulder blades back; controlled stretch.' },
@@ -75,6 +79,47 @@ export const syntheticExercises: Exercise[] = [
   { id: 'supported-row', workout: 'C', order: 2, name: 'Chest-Supported Row', primaryMuscle: 'upper-back', secondaryMuscles: ['back-lats', 'rear-shoulders', 'biceps'], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'Light set × 10', coachingCue: 'No shrugging; keep the full range.' },
   { id: 'one-arm-row', workout: 'C', order: 3, name: 'One-Arm DB Row', primaryMuscle: 'back-lats', secondaryMuscles: ['upper-back', 'rear-shoulders', 'biceps'], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: '7.5 kg × 10', coachingCue: 'Pull toward the hip to bias the lats.' },
   { id: 'biceps', workout: 'C', order: 4, name: 'DB Bicep Curl', primaryMuscle: 'biceps', secondaryMuscles: [], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'One light set', coachingCue: 'Strict top set; controlled back-offs.' },
+  libraryExercise({ id: 'flat-db-press', workout: 'A', order: 5, name: 'Flat DB Press', primaryMuscle: 'chest', secondaryMuscles: ['front-shoulders', 'triceps'], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'Two lighter ramp-up sets', coachingCue: 'Keep shoulders set and wrists stacked.' }),
+  libraryExercise({ id: 'machine-chest-press', workout: 'A', order: 6, name: 'Machine Chest Press', primaryMuscle: 'chest', secondaryMuscles: ['front-shoulders', 'triceps'], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'One light set', coachingCue: 'Set the seat so handles meet mid-chest.' }),
+  libraryExercise({ id: 'push-up', workout: 'A', order: 7, name: 'Push-up', primaryMuscle: 'chest', secondaryMuscles: ['front-shoulders', 'triceps', 'core'], repRange: { min: 8, max: 15 }, targetReps: [8, 8, 8], warmup: 'A few controlled reps', coachingCue: 'Keep a straight line from head to heels.' }),
+  libraryExercise({ id: 'low-to-high-cable-fly', workout: 'A', order: 8, name: 'Low-to-high Cable Fly', primaryMuscle: 'chest', secondaryMuscles: ['front-shoulders'], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'Light stack × 12', coachingCue: 'Bring hands upward and together without shrugging.' }),
+  libraryExercise({ id: 'machine-shoulder-press', workout: 'B', order: 5, name: 'Machine Shoulder Press', primaryMuscle: 'front-shoulders', secondaryMuscles: ['side-shoulders', 'triceps'], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'One light set', coachingCue: 'Keep ribs down and press in a smooth arc.' }),
+  libraryExercise({ id: 'landmine-press', workout: 'B', order: 6, name: 'Landmine Press', primaryMuscle: 'front-shoulders', secondaryMuscles: ['chest', 'triceps'], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'Empty bar × 10 each side', coachingCue: 'Press forward and up without leaning back.' }),
+  libraryExercise({ id: 'arnold-press', workout: 'B', order: 7, name: 'Arnold Press', primaryMuscle: 'front-shoulders', secondaryMuscles: ['side-shoulders', 'triceps'], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'One light set', coachingCue: 'Rotate smoothly and avoid arching.' }),
+  libraryExercise({ id: 'cable-lateral-raise', workout: 'A', order: 9, name: 'Cable Lateral Raise', primaryMuscle: 'side-shoulders', secondaryMuscles: [], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'Light stack × 12', coachingCue: 'Lead with the elbow and keep tension continuous.' }),
+  libraryExercise({ id: 'machine-lateral-raise', workout: 'A', order: 10, name: 'Machine Lateral Raise', primaryMuscle: 'side-shoulders', secondaryMuscles: [], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'One light set', coachingCue: 'Raise with control and pause before lowering.' }),
+  libraryExercise({ id: 'lean-away-lateral-raise', workout: 'A', order: 11, name: 'Lean-away DB Lateral Raise', primaryMuscle: 'side-shoulders', secondaryMuscles: [], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'One very light set', coachingCue: 'Use a stable support and avoid swinging.' }),
+  libraryExercise({ id: 'reverse-pec-deck', workout: 'C', order: 5, name: 'Reverse Pec Deck', primaryMuscle: 'rear-shoulders', secondaryMuscles: ['upper-back'], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'Light stack × 12', coachingCue: 'Keep chest supported and move from the rear delts.' }),
+  libraryExercise({ id: 'cable-rear-delt-fly', workout: 'C', order: 6, name: 'Cable Rear-delt Fly', primaryMuscle: 'rear-shoulders', secondaryMuscles: ['upper-back'], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'Light stack × 12', coachingCue: 'Keep arms softly bent and avoid shrugging.' }),
+  libraryExercise({ id: 'incline-rear-delt-fly', workout: 'C', order: 7, name: 'Incline DB Rear-delt Fly', primaryMuscle: 'rear-shoulders', secondaryMuscles: ['upper-back'], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'One light set', coachingCue: 'Use a light load and move slowly.' }),
+  libraryExercise({ id: 'overhead-cable-triceps-extension', workout: 'B', order: 8, name: 'Overhead Cable Triceps Extension', primaryMuscle: 'triceps', secondaryMuscles: [], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'Light stack × 12', coachingCue: 'Keep elbows pointed forward and steady.' }),
+  libraryExercise({ id: 'single-arm-cable-pushdown', workout: 'B', order: 9, name: 'Single-arm Cable Pushdown', primaryMuscle: 'triceps', secondaryMuscles: [], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'Light stack × 12 each side', coachingCue: 'Keep your elbow pinned to your side.' }),
+  libraryExercise({ id: 'db-overhead-triceps-extension', workout: 'B', order: 10, name: 'DB Overhead Triceps Extension', primaryMuscle: 'triceps', secondaryMuscles: [], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'One light set', coachingCue: 'Keep elbows narrow and ribs down.' }),
+  libraryExercise({ id: 'hammer-curl', workout: 'C', order: 8, name: 'Hammer Curl', primaryMuscle: 'biceps', secondaryMuscles: [], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'One light set', coachingCue: 'Keep palms facing in and avoid swinging.' }),
+  libraryExercise({ id: 'incline-db-curl', workout: 'C', order: 9, name: 'Incline DB Curl', primaryMuscle: 'biceps', secondaryMuscles: [], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'One light set', coachingCue: 'Keep upper arms behind the torso and control the stretch.' }),
+  libraryExercise({ id: 'cable-curl', workout: 'C', order: 10, name: 'Cable Curl', primaryMuscle: 'biceps', secondaryMuscles: [], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'Light stack × 12', coachingCue: 'Keep elbows still and squeeze at the top.' }),
+  libraryExercise({ id: 'assisted-pull-up', workout: 'C', order: 11, name: 'Assisted Pull-up', primaryMuscle: 'back-lats', secondaryMuscles: ['biceps', 'upper-back'], repRange: { min: 6, max: 10 }, targetReps: [6, 6, 6], warmup: 'Choose assistance for easy controlled reps', coachingCue: 'Pull elbows toward ribs without kicking.' }),
+  libraryExercise({ id: 'neutral-grip-pulldown', workout: 'C', order: 12, name: 'Neutral-grip Lat Pulldown', primaryMuscle: 'back-lats', secondaryMuscles: ['biceps'], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'Light stack × 10', coachingCue: 'Keep chest tall and pull elbows down.' }),
+  libraryExercise({ id: 'straight-arm-pulldown', workout: 'C', order: 13, name: 'Straight-arm Cable Pulldown', primaryMuscle: 'back-lats', secondaryMuscles: ['triceps'], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'Light stack × 12', coachingCue: 'Keep arms nearly straight and sweep toward thighs.' }),
+  libraryExercise({ id: 'seated-cable-row', workout: 'C', order: 14, name: 'Seated Cable Row', primaryMuscle: 'upper-back', secondaryMuscles: ['back-lats', 'rear-shoulders', 'biceps'], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'Light stack × 10', coachingCue: 'Reach forward with control, then pull elbows back.' }),
+  libraryExercise({ id: 'machine-row', workout: 'C', order: 15, name: 'Machine Row', primaryMuscle: 'upper-back', secondaryMuscles: ['back-lats', 'rear-shoulders', 'biceps'], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'One light set', coachingCue: 'Keep chest supported and do not shrug.' }),
+  libraryExercise({ id: 'single-arm-cable-row', workout: 'C', order: 16, name: 'Single-arm Cable Row', primaryMuscle: 'upper-back', secondaryMuscles: ['back-lats', 'rear-shoulders', 'biceps'], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'Light stack × 10 each side', coachingCue: 'Keep torso stable and pull elbow toward your hip.' }),
+  libraryExercise({ id: 'leg-press', workout: 'B', order: 11, name: 'Leg Press', primaryMuscle: 'quads', secondaryMuscles: ['glutes'], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'Two light ramp-up sets', coachingCue: 'Keep lower back against the pad and knees tracking toes.' }),
+  libraryExercise({ id: 'goblet-squat', workout: 'B', order: 12, name: 'Goblet Squat', primaryMuscle: 'quads', secondaryMuscles: ['glutes', 'core'], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'Bodyweight × 10, then light load', coachingCue: 'Stay upright and let knees track over toes.' }),
+  libraryExercise({ id: 'hack-or-smith-squat', workout: 'B', order: 13, name: 'Hack Squat / Smith Squat', primaryMuscle: 'quads', secondaryMuscles: ['glutes'], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'Two light ramp-up sets', coachingCue: 'Use the version that lets you squat deeply with control.' }),
+  libraryExercise({ id: 'seated-leg-curl', workout: 'B', order: 14, name: 'Seated Leg Curl', primaryMuscle: 'hamstrings', secondaryMuscles: [], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'Light stack × 12', coachingCue: 'Keep hips down and squeeze through the curl.' }),
+  libraryExercise({ id: 'lying-leg-curl', workout: 'B', order: 15, name: 'Lying Leg Curl', primaryMuscle: 'hamstrings', secondaryMuscles: [], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'Light stack × 12', coachingCue: 'Keep hips pressed into the pad.' }),
+  libraryExercise({ id: 'db-rdl', workout: 'B', order: 16, name: 'DB Romanian Deadlift', primaryMuscle: 'hamstrings', secondaryMuscles: ['glutes'], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'One light set', coachingCue: 'Keep dumbbells close and hinge at the hips.' }),
+  libraryExercise({ id: 'hip-thrust', workout: 'B', order: 17, name: 'Hip Thrust', primaryMuscle: 'glutes', secondaryMuscles: ['hamstrings'], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'Bodyweight × 10, then light load', coachingCue: 'Pause at the top without overextending the lower back.' }),
+  libraryExercise({ id: 'glute-bridge', workout: 'B', order: 18, name: 'Glute Bridge', primaryMuscle: 'glutes', secondaryMuscles: ['hamstrings'], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'Bodyweight × 12', coachingCue: 'Keep ribs down and squeeze at the top.' }),
+  libraryExercise({ id: 'cable-pull-through', workout: 'B', order: 19, name: 'Cable Pull-through', primaryMuscle: 'glutes', secondaryMuscles: ['hamstrings'], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'Light stack × 12', coachingCue: 'Hinge back, then finish by squeezing the glutes.' }),
+  libraryExercise({ id: 'standing-calf-raise', workout: 'B', order: 20, name: 'Standing Calf Raise', primaryMuscle: 'calves', secondaryMuscles: [], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'Bodyweight × 15', coachingCue: 'Use a full stretch and pause at the top.' }),
+  libraryExercise({ id: 'seated-calf-raise', workout: 'B', order: 21, name: 'Seated Calf Raise', primaryMuscle: 'calves', secondaryMuscles: [], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'One light set', coachingCue: 'Control the bottom stretch and avoid bouncing.' }),
+  libraryExercise({ id: 'leg-press-calf-raise', workout: 'B', order: 22, name: 'Leg-press Calf Raise', primaryMuscle: 'calves', secondaryMuscles: [], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'Light sled × 15', coachingCue: 'Move only through the ankles with knees soft.' }),
+  libraryExercise({ id: 'cable-crunch', workout: 'B', order: 23, name: 'Cable Crunch', primaryMuscle: 'core', secondaryMuscles: [], repRange: { min: 10, max: 15 }, targetReps: [10, 10, 10], warmup: 'Light stack × 12', coachingCue: 'Curl ribs toward hips instead of pulling with arms.' }),
+  libraryExercise({ id: 'hanging-knee-raise', workout: 'B', order: 24, name: 'Hanging Knee Raise', primaryMuscle: 'core', secondaryMuscles: [], repRange: { min: 8, max: 15 }, targetReps: [8, 8, 8], warmup: 'A few controlled reps', coachingCue: 'Avoid swinging and curl the pelvis upward.' }),
+  libraryExercise({ id: 'dead-bug', workout: 'B', order: 25, name: 'Dead Bug', primaryMuscle: 'core', secondaryMuscles: [], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'One easy set each side', coachingCue: 'Keep the lower back gently pressed into the floor.' }),
+  libraryExercise({ id: 'pallof-press', workout: 'B', order: 26, name: 'Pallof Press', primaryMuscle: 'core', secondaryMuscles: [], repRange: { min: 8, max: 12 }, targetReps: [8, 8, 8], warmup: 'Light stack × 10 each side', coachingCue: 'Press straight out and resist rotation.' }),
 ]
 
 const progressionSeed: Array<[string, number, string, string, string, ProgressionDecision, string, number]> = [
@@ -92,19 +137,62 @@ const progressionSeed: Array<[string, number, string, string, string, Progressio
   ['biceps', 10, '10 kg × 10; 8 kg × 12 / 12', '10 kg × 11; 8 kg × 12 / 12', 'Grip fatigue', 'Repeat', 'Use one strict top set.', 2],
 ]
 
-export const syntheticProgressions: ExerciseProgression[] = progressionSeed.map(
-  ([exerciseId, currentWeightKg, lastResult, nextTarget, limitingFactor, decision, notes, incrementKg]) => ({
-    exerciseId,
-    currentWeightKg,
-    lastResult,
-    nextTarget,
-    nextTargetReps: [8, 8, 8],
-    limitingFactor,
-    decision,
-    notes,
-    incrementKg,
-  }),
-)
+function unstartedProgression(exercise: Exercise): ExerciseProgression {
+  const nextTargetReps = [...exercise.targetReps]
+  return {
+    exerciseId: exercise.id,
+    currentWeightKg: 0,
+    lastResult: 'No result yet',
+    nextTarget: `Choose a starting load; aim for ${nextTargetReps.join(' / ')}`,
+    nextTargetReps,
+    limitingFactor: '',
+    decision: 'Repeat',
+    notes: '',
+    incrementKg: 2.5,
+  }
+}
+
+const seededProgressionIds = new Set(progressionSeed.map(([exerciseId]) => exerciseId))
+
+export const syntheticProgressions: ExerciseProgression[] = [
+  ...progressionSeed.map(
+    ([exerciseId, currentWeightKg, lastResult, nextTarget, limitingFactor, decision, notes, incrementKg]) => ({
+      exerciseId,
+      currentWeightKg,
+      lastResult,
+      nextTarget,
+      nextTargetReps: [8, 8, 8],
+      limitingFactor,
+      decision,
+      notes,
+      incrementKg,
+    }),
+  ),
+  ...syntheticExercises.filter((exercise) => !seededProgressionIds.has(exercise.id)).map(unstartedProgression),
+]
+
+function cloneExercise(exercise: Exercise): Exercise {
+  return { ...exercise, repRange: { ...exercise.repRange }, targetReps: [...exercise.targetReps], secondaryMuscles: [...exercise.secondaryMuscles] }
+}
+
+/** Adds catalogue entries to existing workspaces without changing their default A/B/C plans or workout history. */
+export function mergeExerciseLibrary(state: FitnessState): FitnessState {
+  const existingExerciseIds = new Set(state.exercises.map((exercise) => exercise.id))
+  const addedExercises = syntheticExercises.filter((exercise) => !existingExerciseIds.has(exercise.id)).map(cloneExercise)
+  if (!addedExercises.length) return state
+
+  const ensureProgressions = (progressions: ExerciseProgression[]) => {
+    const existingIds = new Set(progressions.map((progression) => progression.exerciseId))
+    return [...progressions, ...addedExercises.filter((exercise) => !existingIds.has(exercise.id)).map(unstartedProgression)]
+  }
+
+  return {
+    ...state,
+    exercises: [...state.exercises, ...addedExercises],
+    progressions: ensureProgressions(state.progressions),
+    progressionBaselines: ensureProgressions(state.progressionBaselines),
+  }
+}
 
 function makeCheckIns(): DailyCheckIn[] {
   const start = '2026-06-29'

@@ -71,6 +71,8 @@ export interface Exercise {
   id: string
   workout: WorkoutCode
   order: number
+  /** Whether this exercise is included when its home A/B/C workout starts. */
+  isDefault?: boolean
   name: string
   primaryMuscle: MuscleGroup
   secondaryMuscles: MuscleGroup[]

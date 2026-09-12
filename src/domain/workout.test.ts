@@ -4,6 +4,20 @@ import { addDraftExercise, applyWorkoutCompletion, correctWorkoutSession, delete
 import { hasIncompleteStartedSet } from './exerciseSets'
 
 describe('workout draft exercises', () => {
+  it('keeps library-only exercises out of default A/B/C workouts while allowing them as additions', () => {
+    const state = createPersonalState()
+    const defaultDraft = startWorkoutDraft(state, 'A', DEMO_TODAY)
+    const added = addDraftExercise(state, defaultDraft, 'machine-chest-press')
+
+    expect(defaultDraft.results.map((result) => result.exerciseId)).not.toContain('machine-chest-press')
+    expect(defaultDraft.results).toHaveLength(4)
+    expect(added.results.at(-1)?.exerciseId).toBe('machine-chest-press')
+    expect(state.progressions.find((progression) => progression.exerciseId === 'machine-chest-press')).toMatchObject({
+      currentWeightKg: 0,
+      lastResult: 'No result yet',
+    })
+  })
+
   it('adjusts a draft without changing the saved A/B/C exercise assignments', () => {
     const state = createPersonalState()
     const draft = startWorkoutDraft(state, 'A', DEMO_TODAY)
