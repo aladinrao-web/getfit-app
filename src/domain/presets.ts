@@ -1,5 +1,6 @@
 import type { Exercise, ExerciseProgression, FitnessState, FoodReference, MealPreset, Profile } from './types'
 import { normalizeExerciseMuscles } from './muscles'
+import { migrateProgressionConfiguration } from './progression'
 
 export const PERSONAL_PRESET_SCHEMA_VERSION = 1
 
@@ -40,13 +41,13 @@ export function parsePersonalPresetBundle(text: string): PersonalPresetBundle {
 
 export function applyPersonalPresetBundle(state: FitnessState, bundle: PersonalPresetBundle): FitnessState {
   if (state.checkIns.length || state.workouts.length || state.draftWorkout) throw new Error('Personal presets can only be applied to an empty Personal workspace.')
-  return {
+  return migrateProgressionConfiguration({
     ...state,
     profile: { ...bundle.profile },
     mealPresets: bundle.mealPresets.map((preset) => ({ ...preset, slots: preset.slots.map((slot) => ({ ...slot })) })),
     foodLibrary: bundle.foodLibrary.map((item) => ({ ...item })),
-    exercises: bundle.exercises.map((exercise) => normalizeExerciseMuscles({ ...exercise, targetReps: [...exercise.targetReps] })),
+    exercises: bundle.exercises.map((exercise) => normalizeExerciseMuscles({ ...exercise, repRange: { ...exercise.repRange }, targetReps: [...exercise.targetReps] })),
     progressionBaselines: bundle.progressions.map((progression) => ({ ...progression })),
     progressions: bundle.progressions.map((progression) => ({ ...progression })),
-  }
+  })
 }

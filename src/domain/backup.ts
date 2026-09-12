@@ -1,8 +1,9 @@
 import type { FitnessState } from './types'
 import { migrateExerciseSetsInState } from './exerciseSets'
 import { migrateMuscleMetadataInState } from './muscles'
+import { migrateProgressionConfiguration } from './progression'
 
-export const PERSONAL_BACKUP_SCHEMA_VERSION = 3
+export const PERSONAL_BACKUP_SCHEMA_VERSION = 4
 
 export interface PersonalBackupCounts {
   checkIns: number
@@ -80,7 +81,12 @@ function validateState(value: unknown): asserts value is FitnessState {
     || !['A', 'B', 'C'].includes(String(exercise.workout))
     || typeof exercise.name !== 'string'
     || !Array.isArray(exercise.targetReps)
-    || exercise.targetReps.some((rep) => !isFiniteNumber(rep)))) {
+    || exercise.targetReps.some((rep) => !isFiniteNumber(rep))
+    || !isRecord(exercise.repRange)
+    || !Number.isInteger(exercise.repRange.min)
+    || !Number.isInteger(exercise.repRange.max)
+    || Number(exercise.repRange.min) < 1
+    || Number(exercise.repRange.max) < Number(exercise.repRange.min))) {
     throw new Error('This backup has invalid exercise configuration.')
   }
 
@@ -91,6 +97,10 @@ function validateState(value: unknown): asserts value is FitnessState {
       || !exerciseIds.has(progression.exerciseId)
       || !isFiniteNumber(progression.currentWeightKg)
       || !isFiniteNumber(progression.incrementKg)
+      || !Array.isArray(progression.nextTargetReps)
+      || progression.nextTargetReps.some((rep) => !Number.isInteger(rep) || rep < 1)
+      || (progression.rebuildGoalReps !== undefined && (!Array.isArray(progression.rebuildGoalReps)
+        || progression.rebuildGoalReps.some((rep) => !Number.isInteger(rep) || rep < 1)))
       || !['Increase', 'Repeat', 'Deload', 'Technique focus'].includes(String(progression.decision)))) {
       throw new Error('This backup has invalid progression data.')
     }
@@ -121,8 +131,9 @@ function validateState(value: unknown): asserts value is FitnessState {
 }
 
 export function parsePersonalState(value: unknown): FitnessState {
-  validateState(value)
-  return migrateMuscleMetadataInState(migrateExerciseSetsInState(structuredClone(value)))
+  const normalized = migrateProgressionConfiguration(migrateMuscleMetadataInState(migrateExerciseSetsInState(structuredClone(value as FitnessState))))
+  validateState(normalized)
+  return normalized
 }
 
 export function createPersonalBackup(state: FitnessState, exportedAt = new Date().toISOString()): PersonalBackup {
@@ -155,7 +166,7 @@ export function parsePersonalBackup(raw: string): PersonalBackup {
     recordCounts?: PersonalBackupCounts
     state?: unknown
   }
-  if (![1, 2, PERSONAL_BACKUP_SCHEMA_VERSION].includes(candidate.backupSchemaVersion ?? -1)) {
+  if (![1, 2, 3, PERSONAL_BACKUP_SCHEMA_VERSION].includes(candidate.backupSchemaVersion ?? -1)) {
     throw new Error('This backup version is not supported by this app build.')
   }
   if (candidate.sourceMode !== 'personal') throw new Error('Only Personal workspace backups can be restored here.')
@@ -178,8 +189,8 @@ export function parsePersonalBackup(raw: string): PersonalBackup {
 }
 
 export function serializeLegacyPersonalBackup(state: unknown, exportedAt = new Date().toISOString()) {
-  validateState(state)
-  const normalized = migrateMuscleMetadataInState(migrateExerciseSetsInState(structuredClone(state)))
+  const normalized = migrateProgressionConfiguration(migrateMuscleMetadataInState(migrateExerciseSetsInState(structuredClone(state as FitnessState))))
+  validateState(normalized)
   return JSON.stringify({
     backupSchemaVersion: 1,
     sourceMode: 'personal',

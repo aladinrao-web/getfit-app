@@ -97,7 +97,9 @@ describe('mode persistence', () => {
 
     const migrated = loadModeState(storage, 'demo')
 
-    expect(migrated.progressionBaselines).toEqual(migrated.progressions)
+    expect(migrated.progressionBaselines).toHaveLength(migrated.progressions.length)
+    expect(migrated.progressionBaselines[0].nextTargetReps).toEqual([8, 8, 8])
+    expect(migrated.progressions[0].nextTargetReps).toEqual([12, 11, 11])
     expect(migrated.progressionBaselines).not.toBe(migrated.progressions)
   })
 
@@ -153,6 +155,29 @@ describe('mode persistence', () => {
       primaryMuscle: 'chest',
       secondaryMuscles: ['front-shoulders', 'triceps'],
     })
+    expect(storage.getItem(PRE_CHANGE_BACKUP_KEY)).not.toBeNull()
+  })
+
+  it('migrates legacy progressions to numeric 8-to-12 targets and saves a Personal safety copy', () => {
+    const storage = new MemoryStorage()
+    const current = createPersonalState()
+    const legacyState = structuredClone(current) as unknown as Record<string, unknown>
+    ;(legacyState.exercises as Array<Record<string, unknown>>).forEach((exercise) => delete exercise.repRange)
+    for (const key of ['progressions', 'progressionBaselines']) {
+      ;(legacyState[key] as Array<Record<string, unknown>>).forEach((progression) => delete progression.nextTargetReps)
+    }
+    storage.setItem(MODE_STORAGE_KEYS.personal, JSON.stringify({
+      schemaVersion: 5,
+      mode: 'personal',
+      createdAt: '2026-08-08T10:00:00.000Z',
+      updatedAt: '2026-08-08T10:00:00.000Z',
+      state: legacyState,
+    }))
+
+    const migrated = loadModeState(storage, 'personal')
+
+    expect(migrated.exercises[0].repRange).toEqual({ min: 8, max: 12 })
+    expect(migrated.progressions[0].nextTargetReps).toEqual([8, 8, 8])
     expect(storage.getItem(PRE_CHANGE_BACKUP_KEY)).not.toBeNull()
   })
 })

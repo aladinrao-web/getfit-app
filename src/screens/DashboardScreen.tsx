@@ -3,6 +3,7 @@ import type { AppView } from '../App'
 import { calculateMealTotals, formatLongDate, getFourteenDayNutrition, getPresetForDate, getWeightSummary, proteinTargets } from '../domain/calculations'
 import { getAnsweredMealCount, hasCheckInProgress } from '../domain/checkIn'
 import { getNextWorkoutCode } from '../domain/workout'
+import { formatProgressionTarget } from '../domain/progression'
 import { getHomeFocus, getMuscleCoverage } from '../domain/muscleCoverage'
 import { useFitness } from '../store/FitnessContext'
 import { Button, Card, Metric, PageHeader, ProgressBar, SectionHeading, StatusPill } from '../components/ui'
@@ -95,7 +96,7 @@ export function DashboardScreen({ navigate }: { navigate: (view: AppView) => voi
             {!attention.length && <p className="empty-state-copy">Complete a workout to create your first progression signal.</p>}
             {attention.map((progression) => {
               const exercise = state.exercises.find((item) => item.id === progression.exerciseId)!
-              return <div className="progression-row" key={progression.exerciseId}><div><strong>{exercise.name}</strong><span>{progression.nextTarget}</span></div><StatusPill status={progression.decision} /></div>
+              return <div className="progression-row" key={progression.exerciseId}><div><strong>{exercise.name}</strong><span>{formatProgressionTarget(progression, exercise)}</span></div><StatusPill status={progression.decision} /></div>
             })}
           </div>
         </Card>

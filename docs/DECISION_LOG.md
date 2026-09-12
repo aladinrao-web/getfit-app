@@ -73,7 +73,7 @@ Evidence or condition that should reopen the decision.
 | [D-003](#d-003--optimize-for-low-friction-tracking) | 2026-08-08 | Accepted | Prefer presets, completion, exceptions, and weekly summaries | Tracking must not become a chore |
 | [D-004](#d-004--make-workout-completion-the-commit-boundary) | 2026-08-08 | Accepted | Keep drafts separate; update history and progression only on confirmation | Prevent partial and accidental writes |
 | [D-005](#d-005--make-workout-commits-idempotent-and-atomic) | 2026-08-08 | Accepted | Upsert a stable session and matching progressions together | Prevent duplicates and inconsistent state |
-| [D-006](#d-006--keep-progression-decisions-user-authoritative) | 2026-08-08 | Accepted | Explicit Increase/Repeat/Deload/Technique focus controls progression | Performance context matters more than blind automation |
+| [D-006](#d-006--keep-progression-decisions-user-authoritative) | 2026-08-08 | Superseded by D-029 | Explicit Increase/Repeat/Deload/Technique focus controls progression | Replaced by recorded-performance progression |
 | [D-007](#d-007--use-synthetic-data-for-the-public-baseline) | 2026-08-08 | Accepted | Build the repository and demo with deterministic synthetic data | Protect privacy and make the demo resettable |
 | [D-008](#d-008--use-seven-day-weight-trends-as-the-decision-signal) | 2026-08-08 | Accepted | Separate daily readings from the weekly trend and recommendation | One reading is noisy and should not drive action |
 | [D-009](#d-009--signal-over-target-progress-with-a-star-and-real-accessible-value) | 2026-08-08 | Accepted | Cap the fill, show a light red star, announce the true percentage | Preserve visual scale and semantic truth |
@@ -96,6 +96,7 @@ Evidence or condition that should reopen the decision.
 | [D-026](#d-026-execute-the-sheet-cutover-as-one-guarded-snapshot-replacement) | 2026-08-09 | Accepted | Replace the empty Personal cloud snapshot once from a reconciled private artifact | Complete cutover without adding a permanent importer or exposing Personal data |
 | [D-027](#d-027--use-rolling-effective-set-coverage-before-changing-exercise-plans) | 2026-08-22 | Accepted | Derive 28-day muscle coverage and recommend the smallest relevant training change | Preserve the A/B/C routine while exposing neglected muscles and consistency gaps |
 | [D-028](#d-028--make-exercise-changes-current-session-overrides) | 2026-08-22 | Accepted | Adjust the active draft without rewriting saved A/B/C assignments | Add flexibility while keeping plan structure and progression identities stable |
+| [D-029](#d-029--use-automatic-8-to-12-double-progression) | 2026-09-12 | Accepted | Derive targets and load changes from three completed working sets | Make the next action consistent with recorded progress |
 
 ## Timeline
 
@@ -333,7 +334,7 @@ The persistence architecture changes or offline conflict resolution introduces m
 ## D-006 — Keep progression decisions user-authoritative
 
 - Date: 2026-08-08
-- Status: Accepted
+- Status: Superseded by D-029
 - Owners: Product
 - Related: US-07, FR-PRG-02, FR-PRG-03
 
@@ -1147,7 +1148,7 @@ The user occasionally needs to change the exercises performed on a specific day 
 
 Use option 3. The active workout provides a secondary editor that can add any unused library exercise, remove or reorder exercises, and replace an exercise with an unused option sharing its primary muscle. The draft keeps at least one exercise and never contains duplicate exercise IDs.
 
-An added or replacement exercise initializes from its own target reps, current progression weight, and current progression decision. Removing or replacing an exercise after reps are entered requires confirmation. The completed session records the final exercise IDs, so history, progression, and muscle coverage reflect what was actually performed.
+An added or replacement exercise initializes from its own rep range, immediate rep target, and current progression weight. Removing or replacing an exercise after reps are entered requires confirmation. The completed session records the final exercise IDs, so history, progression, and muscle coverage reflect what was actually performed.
 
 The saved workout and order fields on the exercise library remain unchanged. No new database table, cloud API, or snapshot schema is required because the existing draft already stores an ordered result list.
 
@@ -1165,3 +1166,40 @@ Current-session overrides solve the immediate flexibility problem without adding
 ### Revisit when
 
 The same session adjustments recur often enough to justify saving a new default, or the exercise library needs user-created movements and constraint-aware alternatives.
+
+## D-029 — Use automatic 8-to-12 double progression
+
+- Date: 2026-09-12
+- Status: Accepted
+- Owners: Product, Engineering
+- Related: Supersedes D-006; US-07; FR-PRG-01 through FR-PRG-05
+
+### Context
+
+The previous model required a manual Increase, Repeat, Deload, or Technique focus choice after logging. It could carry a prior choice into a new workout, did not interpret completed reps, and could update progression from an incomplete exercise. The user needs a repeatable rule based on three working sets at the same load.
+
+### Options considered
+
+1. Keep manual choices and add explanatory text.
+2. Increase load whenever any target is reached.
+3. Derive the outcome from all three completed working sets within an 8-to-12 rep range.
+
+### Decision
+
+Use option 3. Each exercise defaults to three working sets in an 8-to-12 range. At the same load, the next immediate target is one rep above each completed set, capped at 12. Completing 12 / 12 / 12 increases the load by the configured increment and starts the new load at 8 / 8 / 8. Any completed set below 8 automatically deloads by that increment, starts at 8 / 8 / 8, and states the rebuild goal of 12 / 12 / 12 at the lower load.
+
+Only exercises with every configured working set logged affect progression. Limiter and form notes remain in history, but normal progression no longer requires a manual decision selector.
+
+### Rationale
+
+The rule turns the recorded result into a small, inspectable next step. It supports gradual rep gains, makes a deload recoverable rather than punitive, and removes an error-prone manual control from normal training.
+
+### Consequences
+
+- Exercise configuration now stores a rep range and progression stores a numeric immediate target.
+- Existing Personal snapshots are normalized on load, with the existing pre-migration safety backup retained before the next cloud write.
+- The app does not diagnose pain or prescribe rehabilitation; users can still record limiter and form context.
+
+### Revisit when
+
+Real training data shows that a movement needs a different rep range, a different number of working sets, or an explicit non-performance override.

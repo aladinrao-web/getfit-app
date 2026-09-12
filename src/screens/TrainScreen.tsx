@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react'
 import { AlertCircle, ArrowDown, ArrowLeft, ArrowUp, Check, ChevronDown, Clock3, Dumbbell, Flag, ListPlus, Pencil, Plus, RefreshCcw, RotateCcw, Save, Trash2, X } from 'lucide-react'
 import { formatLongDate, formatShortDate } from '../domain/calculations'
-import { correctWorkoutSession, formatExerciseResult, getNextWorkoutCode } from '../domain/workout'
-import type { ExerciseResult, ProgressionDecision, WorkoutCode, WorkoutSession } from '../domain/types'
-import { hasCompletedExerciseSet, hasIncompleteStartedSet } from '../domain/exerciseSets'
+import { correctWorkoutSession, formatExerciseResult, getNextWorkoutCode, hasCompleteWorkingSets, progressionDecisionFor } from '../domain/workout'
+import { formatRepTargets, getNextTargetReps } from '../domain/progression'
+import type { ExerciseResult, WorkoutCode, WorkoutSession } from '../domain/types'
+import { hasIncompleteStartedSet } from '../domain/exerciseSets'
 import { muscleLabel } from '../domain/muscles'
 import { useFitness } from '../store/FitnessContext'
 import { Button, Card, Field, PageHeader, SectionHeading, StatusPill } from '../components/ui'
 
 const workoutNames: Record<WorkoutCode, string> = { A: 'Push & chest', B: 'Shoulders, legs & triceps', C: 'Pull & biceps' }
 const limiters = ['', 'General fatigue', 'Form breakdown', 'Stability', 'Pain / discomfort', 'Exercise order', 'Grip fatigue']
-const decisions: ProgressionDecision[] = ['Increase', 'Repeat', 'Deload', 'Technique focus']
 
 export function TrainScreen() {
   const { mode, state, startWorkout, correctWorkout, deleteWorkout } = useFitness()
@@ -46,7 +46,7 @@ export function TrainScreen() {
             <Card className={code === nextWorkout ? 'workout-plan-card recommended' : 'workout-plan-card'} key={code}>
               <div className="plan-card-head"><span className="workout-letter small">{code}</span>{code === nextWorkout && <span className="recommended-label">Up next</span>}</div>
               <h3>{workoutNames[code]}</h3>
-              <ol>{exercises.map((exercise) => <li key={exercise.id}><span>{exercise.name}</span><small>{exercise.targetReps.join(' / ')}</small></li>)}</ol>
+              <ol>{exercises.map((exercise) => <li key={exercise.id}><span>{exercise.name}</span><small>{exercise.repRange.min}–{exercise.repRange.max} reps × {exercise.targetReps.length}</small></li>)}</ol>
               <Button variant="secondary" onClick={() => startWorkout(code)}>Start {code}</Button>
             </Card>
           )
@@ -92,7 +92,10 @@ function ActiveWorkout({ onCompleted }: { onCompleted: () => void }) {
   const [reviewing, setReviewing] = useState(false)
   const [adjustingExercises, setAdjustingExercises] = useState(false)
   const draft = state.draftWorkout!
-  const completed = draft.results.filter((result) => !result.skipped && hasCompletedExerciseSet(result))
+  const completed = draft.results.filter((result) => {
+    const exercise = state.exercises.find((item) => item.id === result.exerciseId)
+    return !result.skipped && Boolean(exercise && hasCompleteWorkingSets(result, exercise))
+  })
   const hasIncompleteSets = draft.results.some((result) => !result.skipped && hasIncompleteStartedSet(result))
 
   function updateSet(result: ExerciseResult, index: number, field: 'weightKg' | 'reps', value: string) {
@@ -137,20 +140,19 @@ function ActiveWorkout({ onCompleted }: { onCompleted: () => void }) {
                 <label className="skip-toggle"><input type="checkbox" checked={Boolean(result.skipped)} onChange={(event) => updateDraftResult(result.exerciseId, { skipped: event.target.checked })} /><span>Skip</span></label>
               </div>
               {!result.skipped && <>
-                <div className="target-strip"><div><span>Last result</span><strong>{progression.lastResult}</strong></div><div><span>Today’s target</span><strong>{progression.nextTarget}</strong></div><div><span>Warm-up</span><strong>{exercise.warmup}</strong></div></div>
+                <div className="target-strip"><div><span>Last result</span><strong>{progression.lastResult}</strong></div><div><span>Today’s target</span><strong>{formatRepTargets(getNextTargetReps(progression, exercise))}</strong></div><div><span>Range</span><strong>{exercise.repRange.min}–{exercise.repRange.max} reps</strong></div><div><span>Warm-up</span><strong>{exercise.warmup}</strong></div></div>
                 <div className="set-log" aria-label={`${exercise.name} sets`}>
                   <div className="set-log-header"><span>Set</span><span>Weight</span><span>Reps</span></div>
                   {result.sets.map((set, index) => <div className="set-log-row" key={index}>
-                    <div className="set-number"><strong>{index + 1}</strong><span>Target {exercise.targetReps[index] ?? '—'}</span></div>
+                    <div className="set-number"><strong>{index + 1}</strong><span>Target {getNextTargetReps(progression, exercise)[index] ?? '—'}</span></div>
                     <div className="unit-input compact"><input aria-label={`${exercise.name} set ${index + 1} weight`} type="number" min="0" step="0.5" value={set.weightKg ?? ''} onChange={(event) => updateSet(result, index, 'weightKg', event.target.value)} /><span>kg</span></div>
-                    <div className="unit-input compact"><input aria-label={`${exercise.name} set ${index + 1} reps`} inputMode="numeric" type="number" min="0" value={set.reps ?? ''} placeholder={`${exercise.targetReps[index] ?? '—'}`} onChange={(event) => updateSet(result, index, 'reps', event.target.value)} /><span>reps</span></div>
+                    <div className="unit-input compact"><input aria-label={`${exercise.name} set ${index + 1} reps`} inputMode="numeric" type="number" min="0" step="1" value={set.reps ?? ''} placeholder={`${getNextTargetReps(progression, exercise)[index] ?? '—'}`} onChange={(event) => updateSet(result, index, 'reps', event.target.value)} /><span>reps</span></div>
                   </div>)}
                 </div>
                 <details className="exercise-details">
                   <summary>Context & progression <ChevronDown size={17} /></summary>
                   <div className="detail-fields">
                     <Field label="What limited the set?"><select value={result.limitingFactor} onChange={(event) => updateDraftResult(result.exerciseId, { limitingFactor: event.target.value })}>{limiters.map((limiter) => <option value={limiter} key={limiter}>{limiter || 'Nothing notable'}</option>)}</select></Field>
-                    <Field label="Progression decision"><select value={result.decision} onChange={(event) => updateDraftResult(result.exerciseId, { decision: event.target.value as ProgressionDecision })}>{decisions.map((decision) => <option key={decision}>{decision}</option>)}</select></Field>
                     <Field label="Form note"><textarea rows={2} value={result.formNotes} placeholder="Only if something changed." onChange={(event) => updateDraftResult(result.exerciseId, { formNotes: event.target.value })} /></Field>
                   </div>
                 </details>
@@ -162,7 +164,7 @@ function ActiveWorkout({ onCompleted }: { onCompleted: () => void }) {
 
       <Card className="session-note-card"><Field label="Session note" hint="Optional. Keep it short."><textarea rows={3} value={draft.sessionNotes} placeholder="Example: shortened session; legs moved to next time." onChange={(event) => updateDraftNotes(event.target.value)} /></Field></Card>
 
-      <div className="finish-bar"><div><strong>{completed.length}</strong><span>of {draft.results.length} exercises have complete sets</span>{hasIncompleteSets && <small>Finish or clear sets missing weight or reps.</small>}</div><Button disabled={!completed.length || hasIncompleteSets} onClick={() => setReviewing(true)}><Flag size={18} />Review & finish</Button></div>
+      <div className="finish-bar"><div><strong>{completed.length}</strong><span>of {draft.results.length} exercises have all working sets logged</span>{hasIncompleteSets && <small>Finish or clear sets missing weight or reps.</small>}</div><Button disabled={!completed.length || hasIncompleteSets} onClick={() => setReviewing(true)}><Flag size={18} />Review & finish</Button></div>
 
       {reviewing && (
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Review workout">
@@ -172,7 +174,7 @@ function ActiveWorkout({ onCompleted }: { onCompleted: () => void }) {
             <div className="review-list">
               {completed.map((result) => {
                 const exercise = state.exercises.find((item) => item.id === result.exerciseId)!
-                return <div key={result.exerciseId}><div><strong>{exercise.name}</strong><span>{formatExerciseResult(result)}</span></div><StatusPill status={result.decision} /></div>
+                return <div key={result.exerciseId}><div><strong>{exercise.name}</strong><span>{formatExerciseResult(result)}</span></div><StatusPill status={progressionDecisionFor(result, exercise)} /></div>
               })}
             </div>
             <div className="review-warning"><RotateCcw size={17} />Confirming twice updates the same session; it never creates duplicates.</div>
@@ -239,7 +241,7 @@ function ExerciseEditor({ onClose }: { onClose: () => void }) {
               return (
                 <div className="draft-exercise-editor-row" key={result.exerciseId}>
                   <span className="exercise-index">{String(index + 1).padStart(2, '0')}</span>
-                  <div className="draft-exercise-editor-copy"><strong>{exercise.name}</strong><span>{muscleLabel(exercise.primaryMuscle)} · {exercise.targetReps.length} sets</span></div>
+                  <div className="draft-exercise-editor-copy"><strong>{exercise.name}</strong><span>{muscleLabel(exercise.primaryMuscle)} · {exercise.repRange.min}–{exercise.repRange.max} reps × {exercise.targetReps.length}</span></div>
                   <div className="draft-exercise-editor-actions">
                     <button className="mini-icon-button" disabled={index === 0} onClick={() => moveDraftExercise(exercise.id, -1)} aria-label={`Move ${exercise.name} up`}><ArrowUp size={15} /></button>
                     <button className="mini-icon-button" disabled={index === draft.results.length - 1} onClick={() => moveDraftExercise(exercise.id, 1)} aria-label={`Move ${exercise.name} down`}><ArrowDown size={15} /></button>
@@ -268,7 +270,7 @@ function ExerciseEditor({ onClose }: { onClose: () => void }) {
               return <button className="exercise-picker-option" onClick={() => chooseExercise(exercise.id)} key={exercise.id}>
                 <span className="workout-letter tiny">{exercise.workout}</span>
                 <span><strong>{exercise.name}</strong><small>Primary: {muscleLabel(exercise.primaryMuscle)}{exercise.secondaryMuscles.length ? ` · Secondary: ${exercise.secondaryMuscles.map(muscleLabel).join(', ')}` : ''}</small></span>
-                <span><strong>{progression?.currentWeightKg ?? 0} kg</strong><small>{exercise.targetReps.join(' / ')} reps</small></span>
+                <span><strong>{progression?.currentWeightKg ?? 0} kg</strong><small>{exercise.repRange.min}–{exercise.repRange.max} reps × {exercise.targetReps.length}</small></span>
               </button>
             })}
             {!candidates.length && <div className="exercise-picker-empty">No unused matching exercise is available in the current library.</div>}
@@ -359,7 +361,6 @@ function SessionDetail({ session, canCorrect, onClose, onCorrect, onDelete }: { 
                 </div>
                 <div className="detail-fields correction-detail-fields">
                   <Field label="Limiting factor"><select value={result.limitingFactor} onChange={(event) => updateResult(result.exerciseId, { limitingFactor: event.target.value })}>{limiters.map((limiter) => <option value={limiter} key={limiter}>{limiter || 'Nothing notable'}</option>)}</select></Field>
-                  <Field label="Progression decision"><select value={result.decision} onChange={(event) => updateResult(result.exerciseId, { decision: event.target.value as ProgressionDecision })}>{decisions.map((decision) => <option key={decision}>{decision}</option>)}</select></Field>
                   <Field label="Form note"><textarea rows={2} value={result.formNotes} onChange={(event) => updateResult(result.exerciseId, { formNotes: event.target.value })} /></Field>
                 </div>
               </div>
@@ -367,7 +368,10 @@ function SessionDetail({ session, canCorrect, onClose, onCorrect, onDelete }: { 
             <Field label="Session note"><textarea rows={2} value={draft.sessionNotes} onChange={(event) => setDraft((current) => ({ ...current, sessionNotes: event.target.value }))} /></Field>
           </div>
           <div className="correction-note"><RotateCcw size={17} /><div><strong>Progression impact after saving</strong><span>This session keeps its ID; later results still win.</span><ul>{progressionPreview.map(({ exerciseId, exercise, progression }) => <li key={exerciseId}><span>{exercise?.name ?? exerciseId}</span><strong>{progression?.nextTarget ?? 'No target change'}</strong></li>)}</ul></div></div>
-          <div className="modal-actions"><Button variant="secondary" onClick={() => { setDraft(structuredClone(session)); setEditing(false) }}><ArrowLeft size={17} />Cancel</Button><Button disabled={!draft.date || !draft.results.length || draft.results.some((result) => !hasCompletedExerciseSet(result) || hasIncompleteStartedSet(result))} onClick={() => onCorrect(draft)}><Save size={17} />Save correction</Button></div>
+          <div className="modal-actions"><Button variant="secondary" onClick={() => { setDraft(structuredClone(session)); setEditing(false) }}><ArrowLeft size={17} />Cancel</Button><Button disabled={!draft.date || !draft.results.length || draft.results.some((result) => {
+            const exercise = state.exercises.find((item) => item.id === result.exerciseId)
+            return !exercise || !hasCompleteWorkingSets(result, exercise) || hasIncompleteStartedSet(result)
+          })} onClick={() => onCorrect(draft)}><Save size={17} />Save correction</Button></div>
         </>}
       </Card>
     </div>

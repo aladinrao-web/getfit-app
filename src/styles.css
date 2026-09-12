@@ -279,7 +279,7 @@ p { color: var(--muted); line-height: 1.55; }
 .exercise-title-row p { margin-bottom: 0; font-size: .77rem; }
 .skip-toggle { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: .7rem; font-weight: 670; }
 .skip-toggle input { accent-color: var(--green); }
-.target-strip { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 18px 0; }
+.target-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 18px 0; }
 .target-strip > div { min-width: 0; padding: 11px 12px; border-radius: 11px; background: #f4f5f1; }
 .target-strip span { display: block; margin-bottom: 5px; color: var(--muted); font-size: .62rem; }
 .target-strip strong { display: block; overflow: hidden; font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
@@ -420,6 +420,7 @@ p { color: var(--muted); line-height: 1.55; }
 .next-target { display: flex; gap: 9px; margin: 14px 0; padding: 12px; border-radius: 12px; background: #eef4e3; color: #4c672c; }
 .next-target div { display: flex; flex-direction: column; gap: 3px; }
 .next-target strong { font-size: .75rem; }
+.next-target small { color: inherit; font-size: .63rem; }
 .limiter { display: flex; gap: 7px; align-items: center; color: var(--red); font-size: .7rem; }
 .limiter span { padding: 3px 6px; border-radius: 6px; background: #fde9e6; font-size: .59rem; font-weight: 760; text-transform: uppercase; }
 .progress-note { min-height: 42px; margin: 12px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: .71rem; }

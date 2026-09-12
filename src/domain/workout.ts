@@ -1,6 +1,7 @@
 import type { DraftWorkout, Exercise, ExerciseProgression, ExerciseResult, FitnessState, ProgressionDecision, WorkoutCode, WorkoutSession } from './types'
 import { createRecordId } from './ids'
 import { completedExerciseSets, hasCompletedExerciseSet } from './exerciseSets'
+import { formatProgressionTarget, getMaximumRepTargets, getMinimumRepTargets, getRepRange } from './progression'
 
 const cycle: WorkoutCode[] = ['A', 'B', 'C']
 
@@ -11,7 +12,7 @@ function draftResultForExercise(state: FitnessState, exercise: Exercise): Exerci
     sets: exercise.targetReps.map(() => ({ weightKg: progression?.currentWeightKg ?? 0, reps: null })),
     limitingFactor: '',
     formNotes: '',
-    decision: progression?.decision ?? 'Repeat',
+    decision: 'Repeat',
   }
 }
 
@@ -82,43 +83,57 @@ export function formatExerciseResult(result: ExerciseResult) {
   return groups.map((group) => `${group.weightKg} kg × ${group.reps.join(' / ')}`).join(' · ')
 }
 
-function referenceWeight(result: ExerciseResult) {
-  return completedExerciseSets(result)[0]?.weightKg ?? 0
+export function hasCompleteWorkingSets(result: ExerciseResult, exercise: Exercise) {
+  const sets = completedExerciseSets(result)
+  return sets.length === exercise.targetReps.length
+    && sets.every((set) => Number.isFinite(set.weightKg) && set.weightKg > 0 && Number.isInteger(set.reps) && set.reps >= 0)
 }
 
-function nextTargetFor(decision: ProgressionDecision, result: ExerciseResult, progression: ExerciseProgression, exercise: Exercise) {
-  const target = exercise.targetReps.join(' / ')
-  const weightKg = referenceWeight(result)
-  if (decision === 'Increase') return `${weightKg + progression.incrementKg} kg × ${target}`
-  if (decision === 'Deload') return `${Math.max(0, weightKg - progression.incrementKg)} kg × ${target} with clean form`
-  if (decision === 'Technique focus') return `${weightKg} kg × ${target} with technique as the priority`
-  return `${weightKg} kg × ${target}`
+export function progressionDecisionFor(result: ExerciseResult, exercise: Exercise): ProgressionDecision {
+  if (!hasCompleteWorkingSets(result, exercise)) return 'Repeat'
+  const reps = completedExerciseSets(result).map((set) => set.reps)
+  const range = getRepRange(exercise)
+  if (reps.some((rep) => rep < range.min)) return 'Deload'
+  if (reps.every((rep) => rep >= range.max)) return 'Increase'
+  return 'Repeat'
 }
 
 function progressionFromResult(result: ExerciseResult, progression: ExerciseProgression, exercise: Exercise): ExerciseProgression {
-  const weightKg = referenceWeight(result)
+  const sets = completedExerciseSets(result)
+  const weightKg = sets[0]?.weightKg ?? progression.currentWeightKg
+  const decision = progressionDecisionFor(result, exercise)
+  const nextTargetReps = decision === 'Increase' || decision === 'Deload'
+    ? getMinimumRepTargets(exercise)
+    : sets.map((set) => Math.min(getRepRange(exercise).max, Math.max(getRepRange(exercise).min, set.reps + 1)))
+  const currentWeightKg = decision === 'Increase'
+    ? weightKg + progression.incrementKg
+    : decision === 'Deload'
+      ? Math.max(0, weightKg - progression.incrementKg)
+      : weightKg
+  const rebuildGoalReps = decision === 'Deload'
+    ? getMaximumRepTargets(exercise)
+    : decision === 'Increase' || weightKg !== progression.currentWeightKg
+      ? undefined
+      : progression.rebuildGoalReps
+  const next = { ...progression, currentWeightKg, nextTargetReps, rebuildGoalReps, decision }
+
   return {
-    ...progression,
-    currentWeightKg:
-      result.decision === 'Increase'
-        ? weightKg + progression.incrementKg
-        : result.decision === 'Deload'
-          ? Math.max(0, weightKg - progression.incrementKg)
-          : weightKg,
+    ...next,
     lastResult: formatExerciseResult(result),
-    nextTarget: nextTargetFor(result.decision, result, progression, exercise),
+    nextTarget: formatProgressionTarget(next, exercise),
     limitingFactor: result.limitingFactor,
-    decision: result.decision,
     notes: result.formNotes || progression.notes,
   }
 }
 
-function latestResultFor(state: FitnessState, exerciseId: string) {
+function progressionHistoryFor(state: FitnessState, exerciseId: string) {
+  const exercise = state.exercises.find((item) => item.id === exerciseId)
+  if (!exercise) return []
   return state.workouts
     .flatMap((session) => session.results
-      .filter((result) => result.exerciseId === exerciseId)
+      .filter((result) => result.exerciseId === exerciseId && hasCompleteWorkingSets(result, exercise))
       .map((result) => ({ session, result })))
-    .sort((a, b) => b.session.date.localeCompare(a.session.date) || b.session.completedAt.localeCompare(a.session.completedAt))[0]
+    .sort((a, b) => a.session.date.localeCompare(b.session.date) || a.session.completedAt.localeCompare(b.session.completedAt))
 }
 
 export function recomputeProgressions(state: FitnessState, affectedExerciseIds: Iterable<string>): FitnessState {
@@ -129,9 +144,9 @@ export function recomputeProgressions(state: FitnessState, affectedExerciseIds: 
     if (!affected.has(progression.exerciseId)) return progression
     const baseline = state.progressionBaselines.find((item) => item.exerciseId === progression.exerciseId) ?? progression
     const exercise = state.exercises.find((item) => item.id === progression.exerciseId)
-    const latest = latestResultFor(state, progression.exerciseId)
-    if (!latest || !exercise) return { ...baseline }
-    return progressionFromResult(latest.result, baseline, exercise)
+    const history = progressionHistoryFor(state, progression.exerciseId)
+    if (!history.length || !exercise) return { ...baseline }
+    return history.reduce((current, entry) => progressionFromResult(entry.result, current, exercise), baseline)
   })
 
   return { ...state, progressions }
@@ -142,7 +157,14 @@ export function correctWorkoutSession(state: FitnessState, corrected: WorkoutSes
   if (existingIndex < 0 || !corrected.results.length) return state
   const existing = state.workouts[existingIndex]
   const workouts = [...state.workouts]
-  workouts[existingIndex] = { ...corrected, completedAt: existing.completedAt }
+  workouts[existingIndex] = {
+    ...corrected,
+    completedAt: existing.completedAt,
+    results: corrected.results.map((result) => {
+      const exercise = state.exercises.find((item) => item.id === result.exerciseId)
+      return exercise ? { ...result, decision: progressionDecisionFor(result, exercise) } : result
+    }),
+  }
   return recomputeProgressions(
     { ...state, workouts },
     [...existing.results, ...corrected.results].map((result) => result.exerciseId),
@@ -161,7 +183,11 @@ export function deleteWorkoutSession(state: FitnessState, sessionId: string): Fi
 export function applyWorkoutCompletion(state: FitnessState, draft: DraftWorkout, completedAt = new Date().toISOString()): FitnessState {
   const completedResults = draft.results
     .filter((result) => !result.skipped && hasCompletedExerciseSet(result))
-    .map((result) => ({ ...result, sets: completedExerciseSets(result) }))
+    .map((result) => {
+      const exercise = state.exercises.find((item) => item.id === result.exerciseId)
+      const completed = { ...result, sets: completedExerciseSets(result) }
+      return exercise ? { ...completed, decision: progressionDecisionFor(completed, exercise) } : completed
+    })
   if (!completedResults.length) return state
 
   const existingIndex = state.workouts.findIndex((workout) => workout.id === draft.id)

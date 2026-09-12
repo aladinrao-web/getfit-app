@@ -65,7 +65,7 @@ getFit is a low-friction personal fitness system that remembers the last meaning
 1. **Personal usefulness before portfolio polish.** A feature must first improve the real workflow.
 2. **Signal over noise.** Prefer seven-day trends, clear targets, and short exceptions over exhaustive data entry.
 3. **Drafts are reversible; commits are consequential.** Typing must never silently rewrite history or progression.
-4. **The user owns progression.** Hitting a rep target does not automatically override an explicit Repeat, Increase, Deload, or Technique focus decision.
+4. **Progression follows recorded performance.** Three complete working sets determine the next load and rep target; form and limiter notes preserve context without requiring a manual progression choice.
 5. **One obvious next action.** Each primary screen should answer what to do now.
 6. **Private by default.** Personal records must not enter the repository or public demo.
 7. **Offline-capable and cloud-backed.** Local persistence protects active work; cloud persistence protects the long-term record and enables phone-to-desktop continuity.
@@ -120,7 +120,7 @@ Targets are hypotheses for the first dogfood cycle, not claims about current per
 - Social feeds, leaderboards, challenges, or coaching marketplaces.
 - Automatic medical, injury, rehabilitation, or diagnostic advice.
 - Detailed ingredient, macro, or calorie weighing.
-- Automatic weight progression based only on rep completion.
+- Automatic medical, injury, rehabilitation, or diagnostic decisions.
 - Wearable, Google Fit, Health Connect, or Apple Health integration.
 - Payments, subscriptions, or commercial onboarding.
 - AI coaching before structured personal data and deterministic rules are reliable.
@@ -304,16 +304,15 @@ It's done when:
 
 ### US-07 — Control progression
 
-**As the primary user, I want progression to reflect performance and context so that the plan does not blindly add weight.**
+**As the primary user, I want progression to reflect my completed reps so that the next load and target are consistent without a manual decision step.**
 
 It's done when:
 
-- Decisions are limited to Increase, Repeat, Deload, and Technique focus.
-- Repeat preserves the working load.
-- Increase applies the configured increment only after confirmation.
-- Deload reduces by the configured increment without going below zero.
-- Technique focus preserves load and states technique as the next priority.
-- An explicit user decision takes precedence over automatic rep interpretation.
+- Every working set must be recorded before the exercise can change progression.
+- At the same weight, completed reps become the baseline and each next target rises by one rep, capped at 12.
+- Completing 12 / 12 / 12 applies the configured load increment and resets the immediate target to 8 / 8 / 8.
+- Any completed set below 8 applies the configured deload and begins an 8-to-12 rebuild at the lower load.
+- The workout and Progress screens show the immediate target separately from the 12 / 12 / 12 rebuild goal after a deload.
 
 ### US-08 — Review workout history and correct mistakes
 
@@ -414,7 +413,7 @@ It's done when:
 - The active workout exposes a secondary exercise-adjustment action.
 - The user can add an unused exercise from any theme, reorder the current session, or remove an exercise while retaining at least one.
 - Replacement choices use unused exercises with the same primary muscle.
-- An added or replacement exercise starts with its own current progression weight, target reps, and progression decision.
+- An added or replacement exercise starts with its own current progression weight, immediate rep target, and configured rep range.
 - Removing or replacing an exercise with entered reps requires confirmation.
 - The completed workout stores the exercises actually performed and updates their own progression and muscle coverage.
 - Closing, discarding, or completing the session does not change the saved A/B/C exercise assignments.
@@ -449,11 +448,13 @@ It's done when:
 | FR-WKO-10 | P0 | The active workout shall allow the user to add, remove, reorder, or same-primary-muscle replace exercises for the current session. | Unit + responsive UI |
 | FR-WKO-11 | P0 | A draft adjustment shall prevent duplicate exercise IDs and shall retain at least one exercise. | Unit |
 | FR-WKO-12 | P0 | Removing or replacing an exercise with entered reps shall require confirmation before clearing its draft result. | UI + E2E |
-| FR-WKO-13 | P0 | Added and replacement exercises shall initialize from their own target reps, current progression weight, and progression decision. | Unit |
+| FR-WKO-13 | P0 | Added and replacement exercises shall initialize from their own immediate rep target, configured rep range, and current progression weight. | Unit |
 | FR-WKO-14 | P0 | Session adjustments shall never mutate saved A/B/C assignments; completion shall store and progress the exercises actually performed. | Unit + integration |
-| FR-PRG-01 | P0 | Only committed exercises shall update matching progression records. | Unit |
-| FR-PRG-02 | P0 | The four allowed progression decisions shall have deterministic effects. | Unit |
-| FR-PRG-03 | P0 | Explicit user decisions shall not be overwritten by automatic rules. | Unit |
+| FR-PRG-01 | P0 | Only committed exercises with every configured working set completed shall update matching progression records. | Unit |
+| FR-PRG-02 | P0 | Exercises shall use a configured rep range, defaulting to 8–12 reps across three working sets. | Unit + migration |
+| FR-PRG-03 | P0 | At the same load, the next immediate target shall be one rep above each completed set, capped at the configured maximum. | Unit |
+| FR-PRG-04 | P0 | Reaching the maximum in every working set shall increase the load by the configured increment and reset the immediate target to the configured minimum. | Unit |
+| FR-PRG-05 | P0 | Falling below the configured minimum in any completed working set shall deload by the configured increment, reset the immediate target to the configured minimum, and state the maximum-rep rebuild goal. | Unit + UI |
 | FR-MUS-01 | P0 | Every exercise shall identify one primary muscle group and zero or more secondary muscle groups. | Unit + migration test |
 | FR-MUS-02 | P0 | Muscle coverage shall use committed sessions from the latest rolling 28 days and compare them with the preceding 28 days. | Unit |
 | FR-MUS-03 | P0 | Coverage shall count each completed primary-muscle set as 1.0 effective set and each secondary-muscle set as 0.5 effective sets. | Unit |
@@ -505,8 +506,8 @@ It's done when:
 
 - **Profile:** goals, gain band, progression/nutrition rules, allergen note, timezone.
 - **Weight/check-in:** stable ID, calendar date, optional weight, partial preset adherence, exceptions, updated timestamp, and optional completion timestamp.
-- **Exercise:** workout code, order, target reps, warm-up, coaching cue, one primary muscle group, and zero or more secondary muscle groups.
-- **Exercise progression:** working load, last result, next target, limiter, decision, notes, increment.
+- **Exercise:** workout code, order, working-set count, configured rep range, warm-up, coaching cue, one primary muscle group, and zero or more secondary muscle groups.
+- **Exercise progression:** next working load, last result, numeric immediate rep target, display target, limiter, computed outcome, notes, and increment.
 - **Muscle coverage:** derived 28-day effective sets, meaningful exposures, target status, prior-period comparison, and contributing exercises. It is calculated from committed sessions rather than stored separately.
 - **Workout draft:** stable session ID, date, workout code, mutable exercise results, notes.
 - **Workout session:** committed version of completed exercise results and completion timestamp.
@@ -604,10 +605,10 @@ It's done when:
 | TC-008 | P0 | Review with no completed exercise | Completion remains unavailable |
 | TC-009 | P0 | Complete one of four exercises | History contains only that exercise |
 | TC-010 | P0 | Confirm the same session twice | Only one session exists |
-| TC-011 | P0 | Finish with Repeat | Working load remains unchanged |
-| TC-012 | P0 | Finish with Increase | Configured increment applies after confirmation |
-| TC-013 | P0 | Finish with Deload | Load decreases by increment and not below zero |
-| TC-014 | P0 | Finish with Technique focus | Load remains and technique target is explicit |
+| TC-011 | P0 | Finish 10 / 9 / 8 at the same load | Next target is 11 / 10 / 9 |
+| TC-012 | P0 | Finish 12 / 12 / 12 | Configured load increment applies and next target resets to 8 / 8 / 8 |
+| TC-013 | P0 | Finish below 8 in any working set | Load deloads by the configured increment and shows an 8-to-12 rebuild path |
+| TC-014 | P0 | Finish one of three working sets | Session may be retained, but progression does not update |
 | TC-015 | P0 | Discard a draft | Draft disappears; history/progression remain unchanged |
 | TC-016 | P0 | Import malformed or future-schema data | Import is rejected; current data remains unchanged |
 | TC-017 | P0 | Export and restore valid Personal data | Record counts and values reconcile exactly |

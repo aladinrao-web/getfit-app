@@ -74,6 +74,10 @@ export interface Exercise {
   name: string
   primaryMuscle: MuscleGroup
   secondaryMuscles: MuscleGroup[]
+  repRange: {
+    min: number
+    max: number
+  }
   targetReps: number[]
   warmup: string
   coachingCue: string
@@ -84,6 +88,8 @@ export interface ExerciseProgression {
   currentWeightKg: number
   lastResult: string
   nextTarget: string
+  nextTargetReps: number[]
+  rebuildGoalReps?: number[]
   limitingFactor: string
   decision: ProgressionDecision
   notes: string

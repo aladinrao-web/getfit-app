@@ -34,17 +34,20 @@ export function migrateExerciseResult(result: ExerciseResult | LegacyExerciseRes
 }
 
 export function migrateExerciseSetsInState(state: FitnessState): FitnessState {
-  return {
+  const migrated = {
     ...state,
     workouts: state.workouts.map((session) => ({
       ...session,
       results: session.results.map((result) => migrateExerciseResult(result)),
     })),
-    draftWorkout: state.draftWorkout
-      ? {
+  }
+  return state.draftWorkout
+    ? {
+        ...migrated,
+        draftWorkout: {
           ...state.draftWorkout,
           results: state.draftWorkout.results.map((result) => migrateExerciseResult(result)),
-        }
-      : undefined,
-  }
+        },
+      }
+    : migrated
 }

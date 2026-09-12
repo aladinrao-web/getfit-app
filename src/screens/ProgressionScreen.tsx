@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { ArrowUpRight, ChevronDown, Dumbbell, Focus, Gauge, Layers3, Target } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, ChevronDown, Dumbbell, Gauge, Layers3, Target } from 'lucide-react'
+import { formatRepTargets, getMaximumRepTargets, getNextTargetReps } from '../domain/progression'
 import type { WorkoutCode } from '../domain/types'
 import { useFitness } from '../store/FitnessContext'
 import { Card, PageHeader, ProgressBar, SectionHeading, StatusPill } from '../components/ui'
@@ -20,7 +21,7 @@ export function ProgressionScreen() {
   const counts = {
     Increase: state.progressions.filter((item) => item.decision === 'Increase').length,
     Repeat: state.progressions.filter((item) => item.decision === 'Repeat').length,
-    Technique: state.progressions.filter((item) => item.decision === 'Technique focus').length,
+    Deload: state.progressions.filter((item) => item.decision === 'Deload').length,
   }
 
   return (
@@ -65,11 +66,11 @@ export function ProgressionScreen() {
         })}
       </div>
 
-      <SectionHeading title="Exercise progression" action={<span className="muted-label">Weight, reps and technique</span>} />
+      <SectionHeading title="Exercise progression" action={<span className="muted-label">Automatic 8–12 rep progression</span>} />
       <div className="progress-summary-grid">
-        <Card><div className="icon-tile lime"><ArrowUpRight size={21} /></div><strong>{counts.Increase}</strong><span>Ready to increase</span></Card>
-        <Card><div className="icon-tile cream"><Gauge size={21} /></div><strong>{counts.Repeat}</strong><span>Building clean reps</span></Card>
-        <Card><div className="icon-tile blue"><Focus size={21} /></div><strong>{counts.Technique}</strong><span>Technique priorities</span></Card>
+        <Card><div className="icon-tile lime"><ArrowUpRight size={21} /></div><strong>{counts.Increase}</strong><span>Load increases</span></Card>
+        <Card><div className="icon-tile cream"><Gauge size={21} /></div><strong>{counts.Repeat}</strong><span>Building reps</span></Card>
+        <Card><div className="icon-tile blue"><ArrowDownRight size={21} /></div><strong>{counts.Deload}</strong><span>Deloads</span></Card>
       </div>
 
       <div className="filter-bar">
@@ -86,7 +87,8 @@ export function ProgressionScreen() {
               <h2>{exercise.name}</h2>
               <div className="current-load"><span>Current working load</span><strong>{progression.currentWeightKg}<small>kg</small></strong></div>
               <div className="progression-detail"><span>Last result</span><strong>{progression.lastResult}</strong></div>
-              <div className="next-target"><Target size={19} /><div><span>Next target</span><strong>{progression.nextTarget}</strong></div></div>
+              <div className="next-target"><Target size={19} /><div><span>Next target</span><strong>{formatRepTargets(getNextTargetReps(progression, exercise))}</strong><small>{exercise.repRange.min}–{exercise.repRange.max} reps × {exercise.targetReps.length}</small></div></div>
+              {progression.rebuildGoalReps?.length && <div className="progression-detail"><span>Rebuild goal</span><strong>{formatRepTargets(progression.rebuildGoalReps)} at {progression.currentWeightKg} kg</strong></div>}
               {progression.limitingFactor && <div className="limiter"><span>Watch</span>{progression.limitingFactor}</div>}
               <p className="progress-note">{progression.notes}</p>
             </Card>
